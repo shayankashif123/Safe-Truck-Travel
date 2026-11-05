@@ -1,0 +1,37 @@
+{
+  "results": [
+    {
+      "id": "aDiscoverId",
+      "title": "Dallas ISD",
+      "type": "discoverAction",
+      "more": { "operation": "discover", "requestBody": { "query": "Dallas ISD" } }
+    },
+    {
+      "id": "T2ME35qKUleNLKiycGnySA",
+      "title": "Denver, CO",
+      "areaType": "municipality",
+      "subtitles": ["United States"],
+      "type": "area",
+      "more": {
+        "operation": "details",
+        "pathParameters": [
+          { "parameter": "type", "argument": "areas" },
+          { "parameter": "id", "argument": "T2ME35qKUleNLKiycGnySA" }
+        ]
+      }
+    },
+    {
+      "id": "-CauVp9VQF6mZ5ZfKjzrXQ",
+      "title": "1600 Penn Street",
+      "subtitles": ["Malta, OH 43758", "United States"],
+      "type": "address",
+      "more": {
+        "operation": "details",
+        "pathParameters": [
+          { "parameter": "type", "argument": "addresses" },
+          { "parameter": "id", "argument": "-CauVp9VQF6mZ5ZfKjzrXQ" }
+        ]
+      }
+    }
+  ]
+}

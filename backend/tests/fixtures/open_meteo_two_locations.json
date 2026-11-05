@@ -1,0 +1,52 @@
+[
+  {
+    "latitude": 39.86313,
+    "longitude": -104.8584,
+    "generationtime_ms": 0.5,
+    "utc_offset_seconds": 0,
+    "timezone": "GMT",
+    "timezone_abbreviation": "GMT",
+    "elevation": 1600.0,
+    "hourly_units": {
+      "time": "unixtime",
+      "wind_speed_10m": "mp/h",
+      "wind_gusts_10m": "mp/h",
+      "rain": "inch",
+      "showers": "inch",
+      "snowfall": "inch"
+    },
+    "hourly": {
+      "time": [1794060000, 1794063600, 1794067200],
+      "wind_speed_10m": [12.1, 30.4, 47.0],
+      "wind_gusts_10m": [20.0, 41.2, null],
+      "rain": [0.0, 0.08, 0.2],
+      "showers": [0.0, 0.03, 0.1],
+      "snowfall": [0.0, 0.0, 0.6]
+    }
+  },
+  {
+    "latitude": 41.86,
+    "longitude": -87.61,
+    "generationtime_ms": 0.4,
+    "utc_offset_seconds": 0,
+    "timezone": "GMT",
+    "timezone_abbreviation": "GMT",
+    "elevation": 180.0,
+    "hourly_units": {
+      "time": "unixtime",
+      "wind_speed_10m": "mp/h",
+      "wind_gusts_10m": "mp/h",
+      "rain": "inch",
+      "showers": "inch",
+      "snowfall": "inch"
+    },
+    "hourly": {
+      "time": [1794060000, 1794063600, 1794067200],
+      "wind_speed_10m": [5.0, 6.0, null],
+      "wind_gusts_10m": [9.0, 10.0, 11.0],
+      "rain": [0.0, 0.0, 0.0],
+      "showers": [0.0, null, 0.0],
+      "snowfall": [0.0, 0.0, 0.0]
+    }
+  }
+]
