@@ -5,6 +5,7 @@ import {
   initialTripFormValues,
   nextQuarterHour,
   type SelectedPlace,
+  swapPlaces,
   toLocalInputValue,
   toTripPlanRequest,
   type TripFormValues,
@@ -82,6 +83,20 @@ describe('validateTripForm', () => {
 
   it('accepts an empty truck', () => {
     expect(validateTripForm(valid({ loadLb: 0 }), NOW)).toEqual({})
+  })
+})
+
+describe('swapPlaces', () => {
+  it('exchanges origin and destination and keeps everything else', () => {
+    const before = valid({ loadLb: 12_345 })
+    const after = swapPlaces(before)
+    expect(after.origin).toBe(DENVER)
+    expect(after.destination).toBe(DALLAS)
+    expect(after.loadLb).toBe(12_345)
+  })
+
+  it('handles an empty side', () => {
+    expect(swapPlaces(valid({ destination: null })).origin).toBeNull()
   })
 })
 

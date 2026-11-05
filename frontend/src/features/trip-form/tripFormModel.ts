@@ -69,6 +69,11 @@ export function validateTripForm(values: TripFormValues, now: Date): TripFormErr
   return errors
 }
 
+/** Origin and destination exchanged in one step (used as a state updater). */
+export function swapPlaces(values: TripFormValues): TripFormValues {
+  return { ...values, origin: values.destination, destination: values.origin }
+}
+
 /** Only call with values that passed validation. */
 export function toTripPlanRequest(values: TripFormValues): TripPlanRequest {
   const { origin, destination, loadLb } = values

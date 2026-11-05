@@ -1,6 +1,7 @@
 import SwapVertRounded from '@mui/icons-material/SwapVertRounded'
-import { Box, IconButton, Stack, Tooltip } from '@mui/material'
+import { IconButton, Stack, Tooltip } from '@mui/material'
 
+import { DestinationMarker, OriginMarker } from '../../shared/ui/PlaceMarkers'
 import { PlaceField } from './PlaceField'
 import type { SelectedPlace } from './tripFormModel'
 
@@ -9,38 +10,15 @@ interface PlacePairFieldProps {
   destination: SelectedPlace | null
   onOriginChange: (place: SelectedPlace | null) => void
   onDestinationChange: (place: SelectedPlace | null) => void
+  /** Must swap both places in a single state update. */
+  onSwap: () => void
   originError?: string
   destinationError?: string
 }
 
-const OriginMarker = () => (
-  <Box
-    aria-hidden
-    sx={{ width: 12, height: 12, borderRadius: '50%', border: 2.5, borderColor: 'grey.700' }}
-  />
-)
-
-const DestinationMarker = () => (
-  <Box
-    aria-hidden
-    sx={{
-      width: 12,
-      height: 12,
-      borderRadius: '50% 50% 50% 0',
-      transform: 'rotate(-45deg)',
-      bgcolor: 'primary.main',
-    }}
-  />
-)
-
 /** Origin and destination, Google-Maps style: ring, pin, and a swap button. */
 export function PlacePairField(props: PlacePairFieldProps) {
-  const { origin, destination, onOriginChange, onDestinationChange } = props
-
-  function swap() {
-    onOriginChange(destination)
-    onDestinationChange(origin)
-  }
+  const { origin, destination } = props
 
   return (
     <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -49,7 +27,7 @@ export function PlacePairField(props: PlacePairFieldProps) {
           id="trip-origin"
           label="From"
           value={origin}
-          onChange={onOriginChange}
+          onChange={props.onOriginChange}
           marker={<OriginMarker />}
           error={props.originError}
         />
@@ -57,7 +35,7 @@ export function PlacePairField(props: PlacePairFieldProps) {
           id="trip-destination"
           label="To"
           value={destination}
-          onChange={onDestinationChange}
+          onChange={props.onDestinationChange}
           marker={<DestinationMarker />}
           error={props.destinationError}
         />
@@ -66,7 +44,7 @@ export function PlacePairField(props: PlacePairFieldProps) {
         <span>
           <IconButton
             aria-label="Swap start and destination"
-            onClick={swap}
+            onClick={props.onSwap}
             disabled={!origin && !destination}
             size="small"
             sx={{ border: 1, borderColor: 'divider' }}

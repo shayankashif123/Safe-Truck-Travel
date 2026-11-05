@@ -10,6 +10,7 @@ import { SpacingField } from './SpacingField'
 import {
   initialTripFormValues,
   type SelectedPlace,
+  swapPlaces,
   toTripPlanRequest,
   type TripFormErrors,
   type TripFormValues,
@@ -41,15 +42,14 @@ interface TripFormProps {
 
 export function TripForm({ onSubmit, submitting }: TripFormProps) {
   const [values, setValues] = useState<TripFormValues>(() => initialTripFormValues(new Date()))
-  const [errors, setErrors] = useState<TripFormErrors>({})
-  const [submitted, setSubmitted] = useState(false)
+  // Errors appear after the first submit and then follow the values live.
+  const [validatedAt, setValidatedAt] = useState<Date | null>(null)
+  const errors: TripFormErrors = validatedAt ? validateTripForm(values, validatedAt) : {}
 
-  function apply(patch: Partial<TripFormValues>) {
-    const next = { ...values, ...patch }
-    setValues(next)
-    // After the first submit, re-validate as the user fixes things.
-    if (submitted) setErrors(validateTripForm(next, new Date()))
-  }
+  // Functional updates: place selection resolves asynchronously, so a patch
+  // must apply to the latest values, never to the values of an older render.
+  const apply = (patch: Partial<TripFormValues>) =>
+    setValues((current) => ({ ...current, ...patch }))
 
   function update<K extends keyof TripFormValues>(key: K, value: TripFormValues[K]) {
     apply({ [key]: value })
@@ -57,10 +57,11 @@ export function TripForm({ onSubmit, submitting }: TripFormProps) {
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    setSubmitted(true)
-    const found = validateTripForm(values, new Date())
-    setErrors(found)
-    if (Object.keys(found).length === 0) onSubmit(toTripPlanRequest(values))
+    const now = new Date()
+    setValidatedAt(now)
+    if (Object.keys(validateTripForm(values, now)).length === 0) {
+      onSubmit(toTripPlanRequest(values))
+    }
   }
 
   return (
@@ -90,6 +91,7 @@ export function TripForm({ onSubmit, submitting }: TripFormProps) {
           destination={values.destination}
           onOriginChange={(place) => update('origin', place)}
           onDestinationChange={(place) => update('destination', place)}
+          onSwap={() => setValues(swapPlaces)}
           originError={errors.origin}
           destinationError={errors.destination}
         />

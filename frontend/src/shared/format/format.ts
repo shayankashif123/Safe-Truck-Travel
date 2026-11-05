@@ -22,6 +22,16 @@ export function formatPounds(pounds: number): string {
   return `${pounds.toLocaleString(LOCALE)} lb`
 }
 
+/** "47 mph" */
+export function formatSpeed(mph: number): string {
+  return `${Math.round(mph)} mph`
+}
+
+/** "0.12 in/h"; two decimals because risk thresholds start at 0.10 in/h. */
+export function formatPrecipitationRate(inchesPerHour: number): string {
+  return `${inchesPerHour.toFixed(2)} in/h`
+}
+
 /** "+18 min", "−5 min", or null when the difference is under a minute. */
 export function formatDurationDelta(seconds: number): string | null {
   if (Math.abs(seconds) < 60) return null

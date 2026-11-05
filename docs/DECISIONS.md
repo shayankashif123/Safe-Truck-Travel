@@ -61,6 +61,16 @@ Resulting bands (lower bound inclusive):
 | W7 | Route geometry in the response. | Simplified to 25 m tolerance (radial pass + Douglas-Peucker): ~800 points per route instead of ~10,000. Encoded polylines were measured and rejected: 10× smaller from TomTom but only ~1 s faster, within its normal variance. | Small responses without visible change on the map. |
 | W5 | API key safety. | The key lives only in `backend/.env`. Provider errors never include URLs, and `httpx` request logging is silenced, because TomTom's routing key travels in the query string. | A key must not leak through logs or error messages. |
 
+## Map
+
+| # | Question | Decision | Reason |
+|---|---|---|---|
+| M1 | Map library and basemap. | MapLibre GL v6 (WebGL2) via react-map-gl v8, with OpenFreeMap's Positron style: free, no key, no request limits, commercial use allowed; attribution is added by MapLibre. | GPU rendering keeps hundreds of checkpoints and the heatmap smooth; a muted basemap lets the risk colours carry the meaning. |
+| M2 | "Show all routes and checkpoints" without clutter. | Every route and every checkpoint is drawn. The selected route is teal with full-size checkpoints; the others are grey with smaller, faded checkpoints. Selection syncs both ways between map and panel. | Satisfies the brief literally while keeping one route in focus. |
+| M3 | Selection performance. | Route and checkpoint data are uploaded once per plan; selecting a route only changes layer filters (a GPU restyle, no data upload, no map re-render). | The same technique powers the heatmap slider. |
+| M4 | Readability. | Route lines are drawn beneath the basemap's place labels; checkpoints and route callouts sit above. Route callouts are placed at the point farthest from other routes. | City names stay legible and callouts of nearby routes do not overlap. |
+| M5 | Resilience. | The map bundle is lazy-loaded (the form is usable first) and wrapped in an error boundary: a failed download offers Reload, a rendering failure (e.g. no WebGL2) explains itself. The panel keeps working either way. | A map problem must never block route comparison. |
+
 ## Heatmap
 
 | # | Question | Decision | Reason |

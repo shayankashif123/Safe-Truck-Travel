@@ -7,6 +7,8 @@ import {
   formatDurationDelta,
   formatMiles,
   formatMilesDelta,
+  formatPrecipitationRate,
+  formatSpeed,
 } from './format'
 
 describe('durations', () => {
@@ -35,6 +37,14 @@ describe('distances', () => {
     expect(formatMilesDelta(127.2)).toBe('+127 mi')
     expect(formatMilesDelta(-4)).toBe('−4 mi')
     expect(formatMilesDelta(0.3)).toBeNull()
+  })
+})
+
+describe('weather values', () => {
+  it('rounds wind to whole mph and precipitation to hundredths', () => {
+    expect(formatSpeed(46.6)).toBe('47 mph')
+    expect(formatPrecipitationRate(0.1)).toBe('0.10 in/h')
+    expect(formatPrecipitationRate(0.256)).toBe('0.26 in/h')
   })
 })
 

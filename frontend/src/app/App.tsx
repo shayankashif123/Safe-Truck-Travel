@@ -1,10 +1,14 @@
-import { Box, Divider } from '@mui/material'
+import { Box, Divider, Skeleton } from '@mui/material'
+import { lazy, Suspense } from 'react'
 
-import { RiskLegend } from '../features/map/RiskLegend'
+import { MapErrorBoundary } from '../features/map/MapErrorBoundary'
 import { TripForm } from '../features/trip-form/TripForm'
 import { useTripPlanner } from '../features/trip-planner/useTripPlanner'
 import { TripResults } from '../features/trip-results/TripResults'
 import { AppHeader } from './AppHeader'
+
+// The map library is large; loading it separately keeps the form interactive sooner.
+const TripMap = lazy(() => import('../features/map/TripMap'))
 
 const PANEL_WIDTH = 420
 
@@ -49,9 +53,23 @@ export default function App() {
             bgcolor: 'grey.100',
           }}
         >
-          <Box sx={{ position: 'absolute', left: 16, bottom: 16 }}>
-            <RiskLegend />
-          </Box>
+          <MapErrorBoundary>
+            <Suspense
+              fallback={
+                <Skeleton
+                  variant="rectangular"
+                  sx={{ position: 'absolute', inset: 0, height: '100%' }}
+                />
+              }
+            >
+              <TripMap
+                plan={planner.plan}
+                selectedRouteId={planner.selectedRouteId}
+                onSelectRoute={planner.selectRoute}
+                busy={planner.status === 'loading'}
+              />
+            </Suspense>
+          </MapErrorBoundary>
         </Box>
       </Box>
     </Box>

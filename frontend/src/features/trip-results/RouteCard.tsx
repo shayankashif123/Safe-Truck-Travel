@@ -11,6 +11,7 @@ import {
 import { RiskBadge } from '../../shared/risk/RiskBadge'
 import { RiskBar } from '../../shared/risk/RiskBar'
 import { RISK_LABEL } from '../../shared/risk/riskLevels'
+import { RouteLetter } from '../../shared/ui/RouteLetter'
 import { compareOn, riskyMilesSummary } from './explain'
 
 interface RouteCardProps {
@@ -94,28 +95,5 @@ export function RouteCard({ route, recommended, selected, onSelect }: RouteCardP
         </Stack>
       </CardActionArea>
     </Card>
-  )
-}
-
-function RouteLetter({ id, active }: { id: string; active: boolean }) {
-  return (
-    <Box
-      aria-hidden
-      sx={{
-        width: 22,
-        height: 22,
-        borderRadius: '6px',
-        display: 'grid',
-        placeItems: 'center',
-        fontSize: '0.75rem',
-        fontWeight: 700,
-        color: active ? 'primary.contrastText' : 'grey.700',
-        bgcolor: active ? 'primary.main' : 'grey.100',
-        border: 1,
-        borderColor: active ? 'primary.main' : 'divider',
-      }}
-    >
-      {id}
-    </Box>
   )
 }
