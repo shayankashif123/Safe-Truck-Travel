@@ -43,5 +43,6 @@ pytest -m live          # contract checks against the real TomTom and Open-Meteo
 ruff check . && ruff format --check .
 
 # frontend/
+npm test                # unit tests (form rules, recommendation wording, formatting)
 npm run lint && npm run typecheck && npm run format:check
 ```

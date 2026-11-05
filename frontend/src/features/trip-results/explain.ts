@@ -1,0 +1,133 @@
+/**
+ * Turns the backend's ranking into plain-language explanations.
+ * The backend decides; this module only words its decision.
+ */
+import type { PlannedRoute, RankingCriterion, TripPlan } from '../../shared/api/types'
+import { formatDuration, formatMiles } from '../../shared/format/format'
+import { RISK_LABEL, type RiskLevel } from '../../shared/risk/riskLevels'
+
+/** The brief's ranking order, as shown to the user. */
+export const RANKING_STEPS: readonly { criterion: RankingCriterion; label: string }[] = [
+  { criterion: 'no_travel_miles', label: 'Fewest No Travel miles' },
+  { criterion: 'severe_miles', label: 'Fewest Severe miles' },
+  { criterion: 'high_miles', label: 'Fewest High miles' },
+  { criterion: 'average_risk', label: 'Lowest average risk' },
+  { criterion: 'duration', label: 'Shortest travel time' },
+]
+
+const RISKY_LEVELS: readonly RiskLevel[] = ['moderate', 'high', 'severe', 'no_travel']
+
+interface CriterionCopy {
+  better: string
+  worse: string
+  value: (route: PlannedRoute) => string
+}
+
+const milesAt = (level: RiskLevel) => (route: PlannedRoute) =>
+  formatMiles(route.risk.miles_by_level[level])
+
+const CRITERION_COPY: Record<RankingCriterion, CriterionCopy> = {
+  no_travel_miles: {
+    better: 'Fewer No Travel miles',
+    worse: 'More No Travel miles',
+    value: milesAt('no_travel'),
+  },
+  severe_miles: {
+    better: 'Fewer Severe miles',
+    worse: 'More Severe miles',
+    value: milesAt('severe'),
+  },
+  high_miles: { better: 'Fewer High miles', worse: 'More High miles', value: milesAt('high') },
+  average_risk: {
+    better: 'Lower average risk',
+    worse: 'Higher average risk',
+    value: (route) => route.risk.average_risk?.toFixed(2) ?? 'n/a',
+  },
+  duration: {
+    better: 'Shorter drive',
+    worse: 'Longer drive',
+    value: (route) => formatDuration(route.duration_s),
+  },
+}
+
+/** e.g. "More Severe miles than Route B (38 mi vs 0 mi)". */
+export function compareOn(
+  criterion: RankingCriterion,
+  subject: PlannedRoute,
+  reference: PlannedRoute,
+  direction: 'better' | 'worse',
+): string {
+  const copy = CRITERION_COPY[criterion]
+  return `${copy[direction]} than Route ${reference.id} (${copy.value(subject)} vs ${copy.value(reference)})`
+}
+
+/** True when both routes spend the same miles at every level above Low. */
+export function sameRiskyMiles(a: PlannedRoute, b: PlannedRoute): boolean {
+  return RISKY_LEVELS.every(
+    (level) =>
+      Math.round(a.risk.miles_by_level[level]) === Math.round(b.risk.miles_by_level[level]),
+  )
+}
+
+/** "50 mi Moderate · 12 mi High", or a calm message when every mile is Low. */
+export function riskyMilesSummary(route: PlannedRoute): string {
+  const parts = RISKY_LEVELS.filter((level) => route.risk.miles_by_level[level] > 0).map(
+    (level) => `${formatMiles(route.risk.miles_by_level[level])} ${RISK_LABEL[level]}`,
+  )
+  if (route.risk.no_data_miles > 0) parts.push(`${formatMiles(route.risk.no_data_miles)} no data`)
+  return parts.length ? parts.join(' · ') : 'Low risk the whole way'
+}
+
+export type SummaryTone = 'success' | 'warning' | 'error'
+
+export interface RecommendationSummary {
+  tone: SummaryTone
+  title: string
+  body: string
+}
+
+export function summarizeRecommendation(plan: TripPlan): RecommendationSummary {
+  const [best, runnerUp] = plan.routes
+  const tone = toneFor(best.risk.worst_level)
+
+  if (plan.all_routes_blocked) {
+    return {
+      tone: 'error',
+      title: 'Every route crosses No Travel conditions',
+      body:
+        `Route ${best.id} has the fewest No Travel miles ` +
+        `(${formatMiles(best.risk.miles_by_level.no_travel)}). Consider a later departure.`,
+    }
+  }
+
+  if (!runnerUp) {
+    return {
+      tone,
+      title: `Route ${best.id} is the only truck route found`,
+      body: riskyMilesSummary(best),
+    }
+  }
+
+  if (!runnerUp.decided_by) {
+    return {
+      tone,
+      title: `Route ${best.id} recommended`,
+      body: 'The routes tie on every criterion; the routing provider lists this one first.',
+    }
+  }
+
+  let body = `${compareOn(runnerUp.decided_by, best, runnerUp, 'better')}.`
+  // Make the average-risk trade-off visible (docs/DECISIONS.md K3a).
+  const extraMiles = best.distance_mi - runnerUp.distance_mi
+  if (runnerUp.decided_by === 'average_risk' && sameRiskyMiles(best, runnerUp) && extraMiles >= 1) {
+    body +=
+      ` Both routes have the same risky miles; Route ${best.id} is ` +
+      `${formatMiles(extraMiles)} longer.`
+  }
+  return { tone, title: `Route ${best.id} recommended`, body }
+}
+
+/** Error tone is reserved for "every route is blocked"; any notable risk is a warning. */
+function toneFor(level: RiskLevel | null): SummaryTone {
+  return level === 'low' || level === 'moderate' ? 'success' : 'warning'
+}
