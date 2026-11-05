@@ -1,0 +1,17 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+# E/F: errors, I: import order, B: bug-prone patterns, UP: modern syntax,
+# SIM: simplifications, DJ: Django-specific checks.
+select = ["E", "F", "I", "B", "UP", "SIM", "DJ"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+# Live tests call real APIs; run them explicitly with `pytest -m live`.
+addopts = "-m 'not live'"
+markers = ["live: calls real third-party APIs (needs network and API keys)"]
