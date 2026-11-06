@@ -11,6 +11,7 @@ from trips.providers.tomtom import Place, PlaceSuggestion
 from trips.services import clients
 from trips.services.places import resolve_place, suggest_places
 from trips.services.routing import truck_routes
+from trips.services.time_zones import time_zone_at
 from trips.services.weather import FETCH_HORIZON, forecasts_for_cells
 
 START = datetime(2026, 11, 7, 14, 0, tzinfo=UTC)
@@ -176,3 +177,20 @@ def test_missing_tomtom_key_fails_with_a_clear_message(settings):
             clients.tomtom_client()
     finally:
         clients.tomtom_client.cache_clear()
+
+
+# --- Time zones ---------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("place", "zone"),
+    [
+        (LatLng(32.7767, -96.797), "America/Chicago"),  # Dallas
+        (LatLng(39.7392, -104.9903), "America/Denver"),  # Denver
+        (LatLng(31.7619, -106.485), "America/Denver"),  # El Paso: Texas, but Mountain time
+        (LatLng(33.4484, -112.074), "America/Phoenix"),  # Arizona: no daylight saving
+        (LatLng(47.5615, -52.7126), "America/St_Johns"),  # Newfoundland: UTC-3:30
+    ],
+)
+def test_time_zone_at_finds_the_local_zone(place, zone):
+    assert time_zone_at(place) == zone

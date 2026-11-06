@@ -121,6 +121,7 @@ export const CorridorHeatmap = memo(function CorridorHeatmap({
         frame={frame}
         lastFrame={lastFrame}
         frameTimeIso={moment.toISOString()}
+        timeZone={plan.origin_time_zone}
         playing={playing}
         visible={visible}
         loadLb={plan.load_lb}

@@ -62,7 +62,7 @@ export function PlaceField({ id, label, value, onChange, marker, error }: PlaceF
         queryFn: ({ signal }) => fetchPlace(suggestion.kind, suggestion.id, signal),
         staleTime: Infinity,
       })
-      onChange({ ...suggestion, position: place.position })
+      onChange({ ...suggestion, position: place.position, time_zone: place.time_zone })
     } catch {
       setResolveError('Could not load this place. Please choose it again.')
       onChange(null)

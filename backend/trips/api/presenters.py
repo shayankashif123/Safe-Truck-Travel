@@ -30,6 +30,9 @@ def present_trip_plan(plan: TripPlan) -> dict[str, Any]:
     by_id = {route.id: route for route in plan.routes}
     return {
         "departure": iso(plan.departure),
+        # IANA zones: the UI shows each time in local time at its place (DECISIONS T4).
+        "origin_time_zone": plan.origin_time_zone,
+        "destination_time_zone": plan.destination_time_zone,
         "load_lb": plan.request.load_lb,
         "spacing_mi": plan.request.spacing_mi,
         "driver": str(plan.request.driver),
@@ -78,6 +81,7 @@ def present_checkpoint(planned: PlannedCheckpoint) -> dict[str, Any]:
         "mile": round(planned.checkpoint.mile, 1),
         "position": _coords(planned.checkpoint.position),
         "eta": iso(planned.eta),
+        "time_zone": planned.time_zone,
         "level": _level_key(planned.level),
         "drivers": [str(f) for f in assessment.drivers] if assessment else [],
         "load_escalated": assessment.load_escalated if assessment else False,
@@ -99,6 +103,7 @@ def present_stop(planned: PlannedStop) -> dict[str, Any]:
         "position": _coords(planned.position),
         "start": iso(planned.start),
         "end": iso(planned.end),
+        "time_zone": planned.time_zone,
     }
 
 
@@ -125,12 +130,13 @@ def present_suggestion(suggestion: PlaceSuggestion) -> dict[str, Any]:
     }
 
 
-def present_place(place: Place) -> dict[str, Any]:
+def present_place(place: Place, time_zone: str | None) -> dict[str, Any]:
     return {
         "id": place.id,
         "title": place.title,
         "subtitle": place.subtitle,
         "position": _coords(place.position),
+        "time_zone": time_zone,
     }
 
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { loadRuleHint } from '../risk/loadRules'
 import {
   formatDayTime,
+  formatLocalTime,
   formatDuration,
   formatDurationDelta,
   formatMiles,
@@ -51,6 +52,14 @@ describe('weather values', () => {
 describe('formatDayTime', () => {
   it('uses a short weekday and a 12-hour clock', () => {
     expect(formatDayTime('2026-11-07T15:15:00Z', 'UTC')).toBe('Sat 3:15 PM')
+  })
+})
+
+describe('formatLocalTime', () => {
+  it('shows local time at the place, labelled with its zone', () => {
+    // One instant, as read in Dallas and in Denver.
+    expect(formatLocalTime('2026-11-07T20:40:00Z', 'America/Chicago')).toBe('Sat 2:40 PM CST')
+    expect(formatLocalTime('2026-11-07T20:40:00Z', 'America/Denver')).toBe('Sat 1:40 PM MST')
   })
 })
 

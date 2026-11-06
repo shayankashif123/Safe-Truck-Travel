@@ -11,6 +11,14 @@ load weight and travel time, and get a clear recommendation.
 - **Backend:** Django 5.2 LTS + Django REST Framework (stateless JSON API)
 - **Frontend:** React 19 + TypeScript + Vite + MUI
 
+## Data sources
+
+- Routing and place search: [TomTom](https://developer.tomtom.com/) (API key required).
+- Weather forecasts: [Open-Meteo](https://open-meteo.com/) (free tier, non-commercial use).
+- Basemap: [OpenFreeMap](https://openfreemap.org/), © [OpenMapTiles](https://openmaptiles.org/), data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
+- Time zones: [timezonefinder](https://github.com/jannikmi/timezonefinder) with
+  [timezone-boundary-builder](https://github.com/evansiroky/timezone-boundary-builder) data (ODbL), offline.
+
 ## Local setup
 
 Requirements: Python 3.12+, Node 22+.

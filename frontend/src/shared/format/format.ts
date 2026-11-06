@@ -1,7 +1,10 @@
 /**
  * Display formatting. US trucking conventions: miles, pounds, 12-hour clock.
- * `timeZone` is only passed in tests; the app uses the viewer's own zone.
+ * Times take the IANA zone of the place they describe (see timeZones.ts);
+ * without one they fall back to the viewer's zone.
  */
+
+import { viewerTimeZone, zoneAbbreviation } from './timeZones'
 
 const LOCALE = 'en-US'
 
@@ -45,21 +48,23 @@ export function formatMilesDelta(miles: number): string | null {
   return `${rounded > 0 ? '+' : '−'}${formatMiles(Math.abs(rounded))}`
 }
 
-/** "Fri 3:15 PM" */
-export function formatDayTime(iso: string, timeZone?: string): string {
+/** "Fri 3:15 PM" on the zone's clock. */
+export function formatDayTime(iso: string, timeZone?: string | null): string {
   return new Intl.DateTimeFormat(LOCALE, {
     weekday: 'short',
     hour: 'numeric',
     minute: '2-digit',
-    timeZone,
+    timeZone: timeZone ?? undefined,
   }).format(new Date(iso))
 }
 
-/** Short name of the viewer's time zone, e.g. "CST" or "GMT+5". */
-export function localTimeZoneName(date = new Date()): string {
-  return (
-    new Intl.DateTimeFormat(LOCALE, { timeZoneName: 'short' })
-      .formatToParts(date)
-      .find((part) => part.type === 'timeZoneName')?.value ?? 'local time'
-  )
+/**
+ * "Fri 3:15 PM CST": local time at a place, always labelled with its zone,
+ * so a trip that crosses zones (or a viewer elsewhere) can never misread it.
+ */
+export function formatLocalTime(iso: string, timeZone?: string | null): string {
+  // Composed from parts: Intl inserts a comma ("Fri, 3:15 PM CST") when a zone
+  // name is requested, which would not match formatDayTime elsewhere in the UI.
+  const zone = zoneAbbreviation(timeZone ?? viewerTimeZone(), new Date(iso))
+  return `${formatDayTime(iso, timeZone)} ${zone}`
 }

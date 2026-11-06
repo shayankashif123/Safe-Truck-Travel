@@ -2,7 +2,7 @@ import CloseRounded from '@mui/icons-material/CloseRounded'
 import { Box, IconButton, Stack, Typography } from '@mui/material'
 
 import type { Checkpoint, CheckpointWeather, RiskFactor } from '../../shared/api/types'
-import { formatDayTime, formatPrecipitationRate, formatSpeed } from '../../shared/format/format'
+import { formatLocalTime, formatPrecipitationRate, formatSpeed } from '../../shared/format/format'
 import { RiskBadge } from '../../shared/risk/RiskBadge'
 
 interface CheckpointPopupProps {
@@ -25,7 +25,7 @@ export function CheckpointPopup({ routeId, checkpoint, onClose }: CheckpointPopu
             Route {routeId} · Mile {Math.round(checkpoint.mile).toLocaleString('en-US')}
           </Typography>
           <Typography variant="subtitle2" component="p">
-            Arrives {formatDayTime(checkpoint.eta)}
+            Arrives {formatLocalTime(checkpoint.eta, checkpoint.time_zone)}
           </Typography>
         </Box>
         {onClose && (

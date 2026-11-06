@@ -46,6 +46,7 @@ const ROUTE: PlannedRoute = {
     mile,
     position: [-100 + mile / 100, 35.1] as [number, number],
     eta: new Date(Date.UTC(2026, 10, 7, 14 + i)).toISOString(),
+    time_zone: 'America/Chicago',
     level: 'low' as const,
     drivers: [],
     load_escalated: false,
@@ -109,6 +110,7 @@ describe('truckPositionAt', () => {
       position: [-99.25, 35.1] as [number, number],
       start: '2026-11-07T15:30:00Z',
       end: '2026-11-08T01:30:00Z',
+      time_zone: 'America/Chicago',
     }
     const RESTING: PlannedRoute = {
       ...ROUTE,

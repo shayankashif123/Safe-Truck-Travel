@@ -56,6 +56,8 @@ function route(
 function plan(routes: PlannedRoute[], blocked = false): TripPlan {
   return {
     departure: '2026-11-07T14:00:00Z',
+    origin_time_zone: 'America/Chicago',
+    destination_time_zone: 'America/Denver',
     load_lb: 40_000,
     spacing_mi: 25,
     driver: 'solo',
@@ -170,6 +172,7 @@ describe('drivingSummary', () => {
     position: [0, 0] as [number, number],
     start: '2026-11-07T22:00:00Z',
     end: '2026-11-07T22:30:00Z',
+    time_zone: null,
   })
 
   it('is null when the truck makes no stops', () => {

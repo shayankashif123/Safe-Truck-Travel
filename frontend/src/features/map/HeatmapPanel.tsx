@@ -4,7 +4,7 @@ import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded'
 import { Box, IconButton, Paper, Slider, Stack, Switch, Tooltip, Typography } from '@mui/material'
 
 import type { StopKind } from '../../shared/api/types'
-import { formatDayTime, formatPounds } from '../../shared/format/format'
+import { formatLocalTime, formatPounds } from '../../shared/format/format'
 import { RiskBadge } from '../../shared/risk/RiskBadge'
 import type { RiskLevel } from '../../shared/risk/riskLevels'
 import { RiskLegendRow } from './RiskLegend'
@@ -22,6 +22,8 @@ interface HeatmapPanelProps {
   frame: number
   lastFrame: number
   frameTimeIso: string
+  /** The trip clock: the origin's zone, so the slider reads like the departure. */
+  timeZone: string | null
   playing: boolean
   visible: boolean
   loadLb: number
@@ -36,7 +38,7 @@ const MARK_STEP_H = 12
 /** The heatmap's control surface: visibility, time scrubber, truck status, legend. */
 export function HeatmapPanel(props: HeatmapPanelProps) {
   const { frame, lastFrame, frameTimeIso, playing, visible, truck } = props
-  const when = formatDayTime(frameTimeIso)
+  const when = formatLocalTime(frameTimeIso, props.timeZone)
   const offset = frame === 0 ? 'At departure' : `Departure + ${frame} h`
   const marks = Array.from({ length: Math.floor(lastFrame / MARK_STEP_H) + 1 }, (_, i) => ({
     value: i * MARK_STEP_H,

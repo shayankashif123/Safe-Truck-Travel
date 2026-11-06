@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from trips.api.presenters import present_place, present_suggestion, present_trip_plan
 from trips.api.serializers import PlaceSuggestQuerySerializer, TripPlanRequestSerializer
 from trips.services.places import resolve_place, suggest_places
+from trips.services.time_zones import time_zone_at
 from trips.services.trip_planner import plan_trip
 
 MIN_SUGGEST_QUERY_LENGTH = 2
@@ -29,7 +30,9 @@ class PlaceDetailView(APIView):
     throttle_scope = "places"
 
     def get(self, request: Request, kind: str, place_id: str) -> Response:
-        return Response(present_place(resolve_place(kind, place_id)))
+        place = resolve_place(kind, place_id)
+        # Lets the form show the departure in the origin's local time.
+        return Response(present_place(place, time_zone_at(place.position)))
 
 
 class TripPlanView(APIView):

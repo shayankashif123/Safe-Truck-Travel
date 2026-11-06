@@ -4,7 +4,7 @@ import { Box, Tooltip, Typography } from '@mui/material'
 import { useEffect, useRef } from 'react'
 
 import type { RouteStop, StopKind } from '../../shared/api/types'
-import { formatDayTime } from '../../shared/format/format'
+import { formatDayTime, formatLocalTime } from '../../shared/format/format'
 
 const STOP_TITLE: Record<StopKind, string> = {
   break: '30-minute break',
@@ -43,7 +43,8 @@ export function StopMarker({ stop, onPointerEnter }: StopMarkerProps) {
 
   const Icon = STOP_ICON[stop.kind]
   const title = STOP_TITLE[stop.kind]
-  const when = `${formatDayTime(stop.start)} – ${formatDayTime(stop.end)}`
+  // Local time where the truck is parked; the zone is named once, at the end.
+  const when = `${formatDayTime(stop.start, stop.time_zone)} – ${formatLocalTime(stop.end, stop.time_zone)}`
   const mile = `mile ${Math.round(stop.mile).toLocaleString('en-US')}`
 
   return (

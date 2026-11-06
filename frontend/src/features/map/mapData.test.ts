@@ -25,6 +25,7 @@ function route(id: string, geometry: LngLat[], levels: (string | null)[] = []): 
       mile: i * 25,
       position: geometry[Math.min(i, geometry.length - 1)],
       eta: '2026-11-07T14:00:00Z',
+      time_zone: null,
       level: level as PlannedRoute['checkpoints'][number]['level'],
       drivers: [],
       load_escalated: false,
@@ -36,6 +37,8 @@ function route(id: string, geometry: LngLat[], levels: (string | null)[] = []): 
 function plan(routes: PlannedRoute[]): TripPlan {
   return {
     departure: '2026-11-07T14:00:00Z',
+    origin_time_zone: 'America/Chicago',
+    destination_time_zone: 'America/Denver',
     load_lb: 40_000,
     spacing_mi: 25,
     driver: 'solo',

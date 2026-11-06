@@ -78,6 +78,14 @@ def test_checkpoints_use_geojson_order_and_string_levels(api, fake_providers):
     assert checkpoint["drivers"] == ["wind"]
     assert checkpoint["weather"]["wind_mph"] == 47.0
     assert checkpoint["eta"].endswith("Z")
+    assert checkpoint["time_zone"] == "America/Chicago"  # the Texas panhandle
+
+
+def test_plan_reports_origin_and_destination_time_zones(api, fake_providers):
+    body = api.post(PLAN_URL, payload(), format="json").json()
+
+    assert body["origin_time_zone"] == "America/Chicago"
+    assert body["destination_time_zone"] == "America/Chicago"
 
 
 def test_geometry_is_simplified_for_the_browser(api, fake_providers):
@@ -112,7 +120,7 @@ def test_solo_driver_is_the_default_and_stops_are_reported(api, monkeypatch):
     assert route["trip_duration_s"] == 22.5 * 3600
     assert [s["kind"] for s in route["stops"]] == ["break", "rest"]
     rest = route["stops"][1]
-    assert set(rest) == {"kind", "mile", "position", "start", "end"}
+    assert set(rest) == {"kind", "mile", "position", "start", "end", "time_zone"}
     assert rest["start"].endswith("Z") and rest["end"].endswith("Z")
 
 
@@ -220,7 +228,7 @@ def test_suggest_skips_the_provider_for_one_character(api, monkeypatch):
     assert api.get("/api/places/suggest/", {"q": " d "}).json() == {"results": []}
 
 
-def test_place_detail_returns_geojson_position(api, monkeypatch):
+def test_place_detail_returns_geojson_position_and_time_zone(api, monkeypatch):
     monkeypatch.setattr(
         "trips.api.views.resolve_place",
         lambda kind, pid: Place(pid, "Denver, CO", "United States", LatLng(39.74, -104.98)),
@@ -233,6 +241,7 @@ def test_place_detail_returns_geojson_position(api, monkeypatch):
         "title": "Denver, CO",
         "subtitle": "United States",
         "position": [-104.98, 39.74],
+        "time_zone": "America/Denver",
     }
 
 

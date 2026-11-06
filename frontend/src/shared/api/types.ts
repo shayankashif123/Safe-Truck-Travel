@@ -1,6 +1,7 @@
 /**
  * Backend API contract. Mirrors docs/API.md; change both together.
  * Coordinates are GeoJSON order [lng, lat]; times are UTC ISO 8601 strings.
+ * `time_zone` fields are IANA names ("America/Denver"), null if unknown.
  */
 import type { RiskLevel } from '../risk/riskLevels'
 
@@ -31,6 +32,7 @@ export interface Place {
   title: string
   subtitle: string
   position: LngLat
+  time_zone: string | null
 }
 
 export interface TripPlanRequest {
@@ -53,6 +55,7 @@ export interface Checkpoint {
   mile: number
   position: LngLat
   eta: string
+  time_zone: string | null
   level: RiskLevel | null
   drivers: RiskFactor[]
   load_escalated: boolean
@@ -65,6 +68,7 @@ export interface RouteStop {
   position: LngLat
   start: string
   end: string
+  time_zone: string | null
 }
 
 export interface RouteRisk {
@@ -107,6 +111,8 @@ export interface Heatmap {
 
 export interface TripPlan {
   departure: string
+  origin_time_zone: string | null
+  destination_time_zone: string | null
   load_lb: number
   spacing_mi: CheckpointSpacing
   driver: DriverMode

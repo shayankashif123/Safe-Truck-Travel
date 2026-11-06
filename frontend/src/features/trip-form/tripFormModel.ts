@@ -10,16 +10,22 @@ import type {
   PlaceSuggestion,
   TripPlanRequest,
 } from '../../shared/api/types'
+import { viewerTimeZone } from '../../shared/format/timeZones'
 
 export interface SelectedPlace extends PlaceSuggestion {
   position: LngLat
+  /** IANA zone of the place; the departure is shown and typed in the origin's. */
+  time_zone: string | null
 }
 
 export interface TripFormValues {
   origin: SelectedPlace | null
   destination: SelectedPlace | null
-  /** Value of an <input type="datetime-local">, in the viewer's time zone. */
-  departureLocal: string
+  /**
+   * The departure instant. Kept as an instant (not as clock text) so choosing an
+   * origin in another time zone changes how it is displayed, never when it is.
+   */
+  departure: Date | null
   loadLb: number | null
   spacingMi: CheckpointSpacing
   driver: DriverMode
@@ -39,7 +45,7 @@ export function initialTripFormValues(now: Date): TripFormValues {
   return {
     origin: null,
     destination: null,
-    departureLocal: toLocalInputValue(nextQuarterHour(now)),
+    departure: nextQuarterHour(now),
     loadLb: 40_000,
     spacingMi: 25,
     // Solo is the safe default: required stops only ever make ETAs later.
@@ -56,13 +62,13 @@ export function validateTripForm(values: TripFormValues, now: Date): TripFormErr
     errors.destination = 'Destination must differ from the starting point.'
   }
 
-  const departure = fromLocalInputValue(values.departureLocal)
+  const { departure } = values
   if (!departure) {
-    errors.departureLocal = 'Enter a departure date and time.'
+    errors.departure = 'Enter a departure date and time.'
   } else if (departure.getTime() < now.getTime() - PAST_GRACE_MS) {
-    errors.departureLocal = 'Departure is in the past.'
+    errors.departure = 'Departure is in the past.'
   } else if (departure.getTime() > now.getTime() + MAX_DEPARTURE_DAYS * DAY_MS) {
-    errors.departureLocal = `Departure must be within the next ${MAX_DEPARTURE_DAYS} days (forecast range).`
+    errors.departure = `Departure must be within the next ${MAX_DEPARTURE_DAYS} days (forecast range).`
   }
 
   if (values.loadLb === null) {
@@ -81,8 +87,7 @@ export function swapPlaces(values: TripFormValues): TripFormValues {
 
 /** Only call with values that passed validation. */
 export function toTripPlanRequest(values: TripFormValues): TripPlanRequest {
-  const { origin, destination, loadLb } = values
-  const departure = fromLocalInputValue(values.departureLocal)
+  const { origin, destination, loadLb, departure } = values
   if (!origin || !destination || loadLb === null || !departure) {
     throw new Error('toTripPlanRequest called with invalid values')
   }
@@ -100,17 +105,7 @@ export function nextQuarterHour(now: Date): Date {
   return new Date(Math.ceil(now.getTime() / QUARTER_HOUR_MS) * QUARTER_HOUR_MS)
 }
 
-/** "2026-11-07T14:05" in the viewer's time zone, as datetime-local inputs expect. */
-export function toLocalInputValue(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
-  )
-}
-
-export function fromLocalInputValue(value: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) return null
-  const date = new Date(value) // no offset in the string: parsed as local time
-  return Number.isNaN(date.getTime()) ? null : date
+/** The zone the departure is shown and typed in: the origin's, else the viewer's. */
+export function departureTimeZone(values: Pick<TripFormValues, 'origin'>): string {
+  return values.origin?.time_zone ?? viewerTimeZone()
 }

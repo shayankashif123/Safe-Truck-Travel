@@ -9,6 +9,7 @@ import { LoadField } from './LoadField'
 import { PlacePairField } from './PlacePairField'
 import { SpacingField } from './SpacingField'
 import {
+  departureTimeZone,
   initialTripFormValues,
   type SelectedPlace,
   swapPlaces,
@@ -26,6 +27,7 @@ const EXAMPLE_TRIP: { origin: SelectedPlace; destination: SelectedPlace } = {
     title: 'Dallas, TX',
     subtitle: 'United States',
     position: [-96.797, 32.7767],
+    time_zone: 'America/Chicago',
   },
   destination: {
     id: 'example-denver',
@@ -33,6 +35,7 @@ const EXAMPLE_TRIP: { origin: SelectedPlace; destination: SelectedPlace } = {
     title: 'Denver, CO',
     subtitle: 'United States',
     position: [-104.9903, 39.7392],
+    time_zone: 'America/Denver',
   },
 }
 
@@ -100,9 +103,11 @@ export function TripForm({ onSubmit, submitting }: TripFormProps) {
         <Divider flexItem />
 
         <DepartureField
-          value={values.departureLocal}
-          onChange={(value) => update('departureLocal', value)}
-          error={errors.departureLocal}
+          value={values.departure}
+          onChange={(value) => update('departure', value)}
+          timeZone={departureTimeZone(values)}
+          placeName={values.origin?.time_zone ? values.origin.title : undefined}
+          error={errors.departure}
         />
         <LoadField
           value={values.loadLb}

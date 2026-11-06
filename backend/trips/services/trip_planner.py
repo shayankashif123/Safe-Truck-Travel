@@ -28,6 +28,7 @@ from trips.providers.open_meteo import OpenMeteoClient
 from trips.providers.tomtom import PROVIDER as ROUTING_PROVIDER
 from trips.providers.tomtom import TomTomClient
 from trips.services.routing import truck_routes
+from trips.services.time_zones import time_zone_at
 from trips.services.weather import forecasts_for_cells
 
 HEATMAP_FRAMES = 49  # slider positions 0..48 hours after departure (DECISIONS H1)
@@ -53,6 +54,7 @@ class PlannedCheckpoint:
     eta: datetime
     weather: WeatherSample | None  # None: no forecast for this place and time
     assessment: RiskAssessment | None
+    time_zone: str | None  # IANA zone of the checkpoint, for showing its local ETA
 
     @property
     def level(self) -> RiskLevel | None:
@@ -68,6 +70,7 @@ class PlannedStop:
     position: LatLng
     start: datetime
     end: datetime
+    time_zone: str | None
 
     @property
     def mile(self) -> float:
@@ -106,6 +109,8 @@ class Heatmap:
 class TripPlan:
     request: TripRequest
     departure: datetime  # effective departure (never in the past)
+    origin_time_zone: str | None
+    destination_time_zone: str | None
     routes: tuple[PlannedRoute, ...]  # routing-provider order
     ranking: Ranking
     heatmap: Heatmap
@@ -157,7 +162,15 @@ def plan_trip(
     )
     ranking = rank_routes([RouteOption(r.id, r.trip_duration_s, r.risk) for r in planned])
     heatmap = _build_heatmap(forecasts, departure, resolution, request.load_lb)
-    return TripPlan(request, departure, planned, ranking, heatmap)
+    return TripPlan(
+        request=request,
+        departure=departure,
+        origin_time_zone=time_zone_at(request.origin),
+        destination_time_zone=time_zone_at(request.destination),
+        routes=planned,
+        ranking=ranking,
+        heatmap=heatmap,
+    )
 
 
 def _plan_route(
@@ -176,7 +189,11 @@ def _plan_route(
         eta = departure + timedelta(seconds=schedule.elapsed_at(checkpoint.elapsed_s))
         weather = forecasts[cell].sample_at(eta)
         assessment = assess_risk(weather, load_lb) if weather else None
-        planned.append(PlannedCheckpoint(checkpoint, eta, weather, assessment))
+        planned.append(
+            PlannedCheckpoint(
+                checkpoint, eta, weather, assessment, time_zone_at(checkpoint.position)
+            )
+        )
 
     risk = summarize_route([RoutePoint(p.checkpoint.mile, p.level) for p in planned])
     stops = tuple(_place_stop(stop, profile, departure) for stop in schedule.stops)
@@ -185,12 +202,14 @@ def _plan_route(
 
 def _place_stop(stop: Stop, profile: RouteProfile, departure: datetime) -> PlannedStop:
     distance_m = profile.distance_at(stop.driving_s)
+    position = profile.position_at(distance_m)
     return PlannedStop(
         stop=stop,
         distance_m=distance_m,
-        position=profile.position_at(distance_m),
+        position=position,
         start=departure + timedelta(seconds=stop.start_s),
         end=departure + timedelta(seconds=stop.end_s),
+        time_zone=time_zone_at(position),
     )
 
 

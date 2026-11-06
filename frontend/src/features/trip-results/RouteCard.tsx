@@ -2,9 +2,9 @@ import { Box, Card, CardActionArea, Stack, Typography } from '@mui/material'
 
 import type { PlannedRoute } from '../../shared/api/types'
 import {
-  formatDayTime,
   formatDuration,
   formatDurationDelta,
+  formatLocalTime,
   formatMiles,
   formatMilesDelta,
 } from '../../shared/format/format'
@@ -17,6 +17,8 @@ import { compareOn, drivingSummary, riskyMilesSummary } from './explain'
 interface RouteCardProps {
   route: PlannedRoute
   recommended: PlannedRoute
+  /** The destination's zone: arrival is shown in local time there. */
+  arrivalTimeZone: string | null
   selected: boolean
   onSelect: () => void
 }
@@ -25,7 +27,13 @@ interface RouteCardProps {
  * One route, about six facts: time first, then the difference from the
  * recommended route, then risk, then why it is not the recommendation.
  */
-export function RouteCard({ route, recommended, selected, onSelect }: RouteCardProps) {
+export function RouteCard({
+  route,
+  recommended,
+  arrivalTimeZone,
+  selected,
+  onSelect,
+}: RouteCardProps) {
   const isRecommended = route.id === recommended.id
   const driving = drivingSummary(route)
   const deltas = [
@@ -77,7 +85,8 @@ export function RouteCard({ route, recommended, selected, onSelect }: RouteCardP
               )}
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              {formatMiles(route.distance_mi)} · Arrives {formatDayTime(route.arrival)}
+              {formatMiles(route.distance_mi)} · Arrives{' '}
+              {formatLocalTime(route.arrival, arrivalTimeZone)}
             </Typography>
             {driving && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>

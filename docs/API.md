@@ -1,7 +1,9 @@
 # API
 
 JSON over HTTP. All times are UTC ISO 8601 (`2026-11-07T14:00:00Z`). All
-coordinates in responses are GeoJSON order: `[lng, lat]`.
+coordinates in responses are GeoJSON order: `[lng, lat]`. `time_zone` fields are
+IANA zone names (`America/Denver`) so the client can show local time at each
+place; they are `null` only if a point lies in no zone.
 
 ## Errors
 
@@ -29,10 +31,10 @@ Autocomplete (US and Canada). Fewer than 2 characters returns no results.
 
 ## `GET /api/places/{kind}/{id}/`
 
-Coordinates of a suggestion.
+Coordinates and time zone of a suggestion.
 
 ```json
-{ "id": "T2ME35...", "title": "Denver, CO", "subtitle": "United States", "position": [-104.98485, 39.73845] }
+{ "id": "T2ME35...", "title": "Denver, CO", "subtitle": "United States", "position": [-104.98485, 39.73845], "time_zone": "America/Denver" }
 ```
 
 ## `POST /api/trips/plan/`
@@ -62,6 +64,8 @@ Response (abridged):
 ```json
 {
   "departure": "2026-11-07T14:00:00Z",
+  "origin_time_zone": "America/Chicago",
+  "destination_time_zone": "America/Denver",
   "load_lb": 42000,
   "spacing_mi": 25,
   "driver": "solo",
@@ -78,8 +82,8 @@ Response (abridged):
       "driving_duration_s": 47718,
       "arrival": "2026-11-08T13:45:18Z",
       "stops": [
-        { "kind": "break", "mile": 612.4, "position": [-101.8313, 35.2220], "start": "2026-11-07T22:00:00Z", "end": "2026-11-07T22:30:00Z" },
-        { "kind": "rest", "mile": 818.9, "position": [-103.2310, 37.8121], "start": "2026-11-08T01:30:00Z", "end": "2026-11-08T11:30:00Z" }
+        { "kind": "break", "mile": 612.4, "position": [-101.8313, 35.2220], "start": "2026-11-07T22:00:00Z", "end": "2026-11-07T22:30:00Z", "time_zone": "America/Chicago" },
+        { "kind": "rest", "mile": 818.9, "position": [-103.2310, 37.8121], "start": "2026-11-08T01:30:00Z", "end": "2026-11-08T11:30:00Z", "time_zone": "America/Denver" }
       ],
       "risk": {
         "miles_by_level": { "low": 931.8, "moderate": 0, "high": 0, "severe": 0, "no_travel": 0 },
@@ -93,6 +97,7 @@ Response (abridged):
           "mile": 25.0,
           "position": [-97.1012, 32.9471],
           "eta": "2026-11-07T14:31:10Z",
+          "time_zone": "America/Chicago",
           "level": "moderate",
           "drivers": ["wind"],
           "load_escalated": false,

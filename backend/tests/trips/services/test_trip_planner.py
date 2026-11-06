@@ -199,6 +199,27 @@ def test_weather_window_covers_a_solo_arrival_beyond_48_hours():
     assert all(c.level is not None for c in route.checkpoints)
 
 
+# --- Time zones -----------------------------------------------------------------
+
+
+def test_checkpoints_and_stops_carry_the_local_time_zone_of_their_place():
+    # Albuquerque, NM (Mountain) eastwards into Texas (Central): 12 h of driving.
+    west_to_east = straight_route(start=LatLng(35.08, -106.65), length_deg=8.0, hours=12.0)
+    req = request(origin=LatLng(35.08, -106.65), destination=LatLng(35.08, -98.65), spacing_mi=50)
+
+    result = plan(req, routes=(west_to_east,), weather=FieldWeather())
+
+    assert (result.origin_time_zone, result.destination_time_zone) == (
+        "America/Denver",
+        "America/Chicago",
+    )
+    zones = [c.time_zone for c in result.routes[0].checkpoints]
+    assert zones[0] == "America/Denver" and zones[-1] == "America/Chicago"
+    # One switch from Mountain to Central, never back.
+    assert zones == sorted(zones, key=lambda z: z == "America/Chicago")
+    assert all(s.time_zone == "America/Chicago" for s in result.routes[0].stops)
+
+
 # --- Heatmap ---------------------------------------------------------------------
 
 

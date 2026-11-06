@@ -1,6 +1,6 @@
 import { Box, LinearProgress, Stack, Typography } from '@mui/material'
 
-import { formatDayTime, formatPounds } from '../../shared/format/format'
+import { formatLocalTime, formatPounds } from '../../shared/format/format'
 import type { TripPlanner } from '../trip-planner/useTripPlanner'
 import { RecommendationSummary } from './RecommendationSummary'
 import { ResultsError } from './ResultsError'
@@ -29,8 +29,8 @@ export function TripResults({ planner }: { planner: TripPlanner }) {
             {plan.routes.length} {plan.routes.length === 1 ? 'route' : 'routes'} compared
           </Typography>
           <Typography variant="caption" color="text.secondary" component="p">
-            Departs {formatDayTime(plan.departure)} · {formatPounds(plan.load_lb)} · checkpoint
-            every {plan.spacing_mi} mi
+            Departs {formatLocalTime(plan.departure, plan.origin_time_zone)} ·{' '}
+            {formatPounds(plan.load_lb)} · checkpoint every {plan.spacing_mi} mi
           </Typography>
         </Box>
 
@@ -42,6 +42,7 @@ export function TripResults({ planner }: { planner: TripPlanner }) {
               key={route.id}
               route={route}
               recommended={recommended}
+              arrivalTimeZone={plan.destination_time_zone}
               selected={route.id === planner.selectedRouteId}
               onSelect={() => planner.selectRoute(route.id)}
             />
