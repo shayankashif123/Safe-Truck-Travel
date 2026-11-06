@@ -28,7 +28,8 @@ COPY --from=frontend /app/frontend/dist ./frontend_dist
 # Compress once at build time; WhiteNoise then serves the .gz/.br copies.
 RUN python -m whitenoise.compress --quiet frontend_dist
 
-RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app
+# A home directory: gunicorn keeps its control socket there.
+RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin app
 USER app
 
 ENV FRONTEND_DIST_DIR=/app/frontend_dist \

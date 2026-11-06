@@ -25,8 +25,9 @@ def env_str(name: str, default: str | None = None) -> str:
     value = os.environ.get(name, default)
     if value is None or value == "":
         raise ImproperlyConfigured(
-            f"Environment variable {name} is not set. "
-            "Copy backend/.env.example to backend/.env and fill it in."
+            f"Environment variable {name} is not set. Locally: copy "
+            "backend/.env.example to backend/.env and fill it in. On a host: add it "
+            "to the service's environment (see README, Deployment)."
         )
     return value
 
