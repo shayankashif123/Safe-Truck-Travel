@@ -6,8 +6,9 @@ export default defineConfig({
   server: {
     // In development the frontend talks to Django through this proxy, so the
     // browser sees one origin and no CORS setup is needed locally.
+    // API_PROXY_TARGET points it at a backend on another port.
     proxy: {
-      '/api': 'http://127.0.0.1:8000',
+      '/api': process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000',
     },
   },
   optimizeDeps: {

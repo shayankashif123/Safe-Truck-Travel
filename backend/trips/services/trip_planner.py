@@ -1,7 +1,8 @@
 """
 Plan a trip end to end:
 
-    routes -> checkpoints + ETAs -> weather (one batch) -> risk -> ranking -> heatmap
+    routes -> driver stops -> checkpoints + ETAs -> weather (one batch)
+           -> risk -> ranking -> heatmap
 
 This module only orchestrates. Every rule it applies lives in trips.domain.
 """
@@ -16,6 +17,7 @@ from trips.domain.errors import InvalidInput
 from trips.domain.forecast import HourlyForecast, floor_hour
 from trips.domain.geo import LatLng
 from trips.domain.geometry import METERS_PER_MILE, haversine_m
+from trips.domain.hours_of_service import DriverMode, DrivingSchedule, Stop, schedule_drive
 from trips.domain.levels import RiskLevel
 from trips.domain.ranking import Ranking, RouteOption, rank_routes
 from trips.domain.routes import Route
@@ -42,6 +44,7 @@ class TripRequest:
     departure: datetime
     load_lb: int
     spacing_mi: int
+    driver: DriverMode
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,11 +60,33 @@ class PlannedCheckpoint:
 
 
 @dataclass(frozen=True, slots=True)
+class PlannedStop:
+    """A required driver break or rest, placed where the truck will be at the time."""
+
+    stop: Stop
+    distance_m: float  # from the origin, along the route
+    position: LatLng
+    start: datetime
+    end: datetime
+
+    @property
+    def mile(self) -> float:
+        return self.distance_m / METERS_PER_MILE
+
+
+@dataclass(frozen=True, slots=True)
 class PlannedRoute:
     id: str
     route: Route
+    schedule: DrivingSchedule
+    stops: tuple[PlannedStop, ...]
     checkpoints: tuple[PlannedCheckpoint, ...]
     risk: RouteRiskSummary
+
+    @property
+    def trip_duration_s(self) -> float:
+        """Door to door, including required stops. The ranking's "travel time"."""
+        return self.schedule.total_s
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +129,7 @@ def plan_trip(
     routes = routes[: len(ROUTE_IDS)]
 
     profiles = [RouteProfile(route) for route in routes]
+    schedules = [schedule_drive(route.duration_s, request.driver) for route in routes]
     resolution, corridor = choose_corridor(profiles)
     checkpoints = [place_checkpoints(profile, request.spacing_mi) for profile in profiles]
     checkpoint_cells = [[cell_for(cp.position, resolution) for cp in cps] for cps in checkpoints]
@@ -111,9 +137,8 @@ def plan_trip(
     # One window covers every checkpoint ETA and every heatmap frame. The extra
     # hour is the precipitation bucket that follows the last moment (DECISIONS T2).
     window_start = floor_hour(departure)
-    last_moment = max(
-        departure + timedelta(hours=HEATMAP_FRAMES - 1),
-        departure + timedelta(seconds=max(cps[-1].elapsed_s for cps in checkpoints)),
+    last_moment = departure + timedelta(
+        hours=max(HEATMAP_FRAMES - 1, max(s.total_s for s in schedules) / 3600)
     )
     window_end = floor_hour(last_moment) + timedelta(hours=1)
 
@@ -123,19 +148,22 @@ def plan_trip(
     )
 
     planned = tuple(
-        _plan_route(ROUTE_IDS[i], route, cps, cells, forecasts, departure, request.load_lb)
-        for i, (route, cps, cells) in enumerate(
-            zip(routes, checkpoints, checkpoint_cells, strict=True)
+        _plan_route(
+            ROUTE_IDS[i], profile, schedule, cps, cells, forecasts, departure, request.load_lb
+        )
+        for i, (profile, schedule, cps, cells) in enumerate(
+            zip(profiles, schedules, checkpoints, checkpoint_cells, strict=True)
         )
     )
-    ranking = rank_routes([RouteOption(r.id, r.route.duration_s, r.risk) for r in planned])
+    ranking = rank_routes([RouteOption(r.id, r.trip_duration_s, r.risk) for r in planned])
     heatmap = _build_heatmap(forecasts, departure, resolution, request.load_lb)
     return TripPlan(request, departure, planned, ranking, heatmap)
 
 
 def _plan_route(
     route_id: str,
-    route: Route,
+    profile: RouteProfile,
+    schedule: DrivingSchedule,
     checkpoints: list[Checkpoint],
     cells: list[GridCell],
     forecasts: dict[GridCell, HourlyForecast],
@@ -144,13 +172,26 @@ def _plan_route(
 ) -> PlannedRoute:
     planned = []
     for checkpoint, cell in zip(checkpoints, cells, strict=True):
-        eta = departure + timedelta(seconds=checkpoint.elapsed_s)
+        # Checkpoints carry driving time; the schedule adds the stops made before them.
+        eta = departure + timedelta(seconds=schedule.elapsed_at(checkpoint.elapsed_s))
         weather = forecasts[cell].sample_at(eta)
         assessment = assess_risk(weather, load_lb) if weather else None
         planned.append(PlannedCheckpoint(checkpoint, eta, weather, assessment))
 
     risk = summarize_route([RoutePoint(p.checkpoint.mile, p.level) for p in planned])
-    return PlannedRoute(route_id, route, tuple(planned), risk)
+    stops = tuple(_place_stop(stop, profile, departure) for stop in schedule.stops)
+    return PlannedRoute(route_id, profile.route, schedule, stops, tuple(planned), risk)
+
+
+def _place_stop(stop: Stop, profile: RouteProfile, departure: datetime) -> PlannedStop:
+    distance_m = profile.distance_at(stop.driving_s)
+    return PlannedStop(
+        stop=stop,
+        distance_m=distance_m,
+        position=profile.position_at(distance_m),
+        start=departure + timedelta(seconds=stop.start_s),
+        end=departure + timedelta(seconds=stop.end_s),
+    )
 
 
 def _build_heatmap(

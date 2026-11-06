@@ -2,7 +2,7 @@
  * Turns the backend's ranking into plain-language explanations.
  * The backend decides; this module only words its decision.
  */
-import type { PlannedRoute, RankingCriterion, TripPlan } from '../../shared/api/types'
+import type { PlannedRoute, RankingCriterion, StopKind, TripPlan } from '../../shared/api/types'
 import { formatDuration, formatMiles } from '../../shared/format/format'
 import { RISK_LABEL, type RiskLevel } from '../../shared/risk/riskLevels'
 
@@ -12,7 +12,7 @@ export const RANKING_STEPS: readonly { criterion: RankingCriterion; label: strin
   { criterion: 'severe_miles', label: 'Fewest Severe miles' },
   { criterion: 'high_miles', label: 'Fewest High miles' },
   { criterion: 'average_risk', label: 'Lowest average risk' },
-  { criterion: 'duration', label: 'Shortest travel time' },
+  { criterion: 'duration', label: 'Shortest travel time (door to door)' },
 ]
 
 const RISKY_LEVELS: readonly RiskLevel[] = ['moderate', 'high', 'severe', 'no_travel']
@@ -44,9 +44,9 @@ const CRITERION_COPY: Record<RankingCriterion, CriterionCopy> = {
     value: (route) => route.risk.average_risk?.toFixed(2) ?? 'n/a',
   },
   duration: {
-    better: 'Shorter drive',
-    worse: 'Longer drive',
-    value: (route) => formatDuration(route.duration_s),
+    better: 'Shorter trip',
+    worse: 'Longer trip',
+    value: (route) => formatDuration(route.trip_duration_s),
   },
 }
 
@@ -76,6 +76,25 @@ export function riskyMilesSummary(route: PlannedRoute): string {
   )
   if (route.risk.no_data_miles > 0) parts.push(`${formatMiles(route.risk.no_data_miles)} no data`)
   return parts.length ? parts.join(' · ') : 'Low risk the whole way'
+}
+
+const STOP_NOUN: Record<StopKind, [singular: string, plural: string]> = {
+  break: ['break (30 min)', 'breaks (30 min each)'],
+  rest: ['rest (10 h)', 'rests (10 h each)'],
+}
+
+/**
+ * Where a solo trip's extra time comes from, e.g.
+ * "12 h 48 min driving + 1 break (30 min) + 1 rest (10 h)". Null when there are no stops.
+ */
+export function drivingSummary(route: PlannedRoute): string | null {
+  if (route.stops.length === 0) return null
+  const parts = [`${formatDuration(route.driving_duration_s)} driving`]
+  for (const kind of ['break', 'rest'] as const) {
+    const count = route.stops.filter((stop) => stop.kind === kind).length
+    if (count > 0) parts.push(`${count} ${STOP_NOUN[kind][count === 1 ? 0 : 1]}`)
+  }
+  return parts.join(' + ')
 }
 
 export type SummaryTone = 'success' | 'warning' | 'error'

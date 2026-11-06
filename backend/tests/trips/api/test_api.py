@@ -98,6 +98,32 @@ def test_heatmap_is_compact_integers_per_frame(api, fake_providers):
     assert all(level in (0, 1, 2, 3, 4, None) for level in cell["levels"])
 
 
+def test_solo_driver_is_the_default_and_stops_are_reported(api, monkeypatch):
+    # 12 h of driving: a solo driver breaks at 8 h and rests at 11 h.
+    long_route = straight_route(start=LatLng(35.0, -100.0), length_deg=12.0, hours=12.0)
+    monkeypatch.setattr("trips.services.routing.tomtom_client", lambda: FakeRouting([long_route]))
+    monkeypatch.setattr("trips.services.weather.open_meteo_client", lambda: FieldWeather())
+
+    body = api.post(PLAN_URL, payload(spacing_mi=50), format="json").json()
+
+    assert body["driver"] == "solo"
+    (route,) = body["routes"]
+    assert route["driving_duration_s"] == 12 * 3600
+    assert route["trip_duration_s"] == 22.5 * 3600
+    assert [s["kind"] for s in route["stops"]] == ["break", "rest"]
+    rest = route["stops"][1]
+    assert set(rest) == {"kind", "mile", "position", "start", "end"}
+    assert rest["start"].endswith("Z") and rest["end"].endswith("Z")
+
+
+def test_team_driver_has_no_stops(api, fake_providers):
+    body = api.post(PLAN_URL, payload(driver="team"), format="json").json()
+
+    assert body["driver"] == "team"
+    assert all(r["stops"] == [] for r in body["routes"])
+    assert all(r["trip_duration_s"] == r["driving_duration_s"] for r in body["routes"])
+
+
 # --- Trip plan: validation -----------------------------------------------------
 
 
@@ -109,6 +135,7 @@ def test_heatmap_is_compact_integers_per_frame(api, fake_providers):
         ({"load_lb": 100_001}, "load_lb"),
         ({"departure": "tomorrow"}, "departure"),
         ({"origin": {"lat": 95, "lng": 0}}, "origin"),
+        ({"driver": "convoy"}, "driver"),
     ],
 )
 def test_invalid_fields_are_reported_per_field(api, override, field):

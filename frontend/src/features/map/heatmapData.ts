@@ -4,7 +4,7 @@
  */
 import type { FeatureCollection, Polygon } from 'geojson'
 
-import type { Heatmap, HeatmapCell, LngLat, PlannedRoute } from '../../shared/api/types'
+import type { Heatmap, HeatmapCell, LngLat, PlannedRoute, RouteStop } from '../../shared/api/types'
 import { pointAlong } from './mapData'
 
 /** Level value used for "no forecast" (map feature state cannot hold null). */
@@ -57,36 +57,57 @@ export interface TruckPosition {
   position: LngLat
   mile: number
   arrived: boolean
+  /** The required driver stop being made at this moment, if any. */
+  stop: RouteStop | null
+}
+
+interface Keyframe {
+  time: number
+  mile: number
 }
 
 /**
- * Where the truck on `route` is at `moment`, interpolated between checkpoint
- * ETAs and placed on the route line so it never cuts corners.
+ * The truck's timeline: every checkpoint ETA plus the start and end of every
+ * stop. Between keyframes the truck moves at a steady speed; during a stop the
+ * two keyframes share a mile, so it stands still.
  */
-export function truckPositionAt(route: PlannedRoute, moment: Date): TruckPosition {
-  const { checkpoints } = route
-  const t = moment.getTime()
-  const times = checkpoints.map((c) => new Date(c.eta).getTime())
-  const last = checkpoints.length - 1
+function keyframes(route: PlannedRoute): Keyframe[] {
+  const frames = route.checkpoints.map((c) => ({ time: Date.parse(c.eta), mile: c.mile }))
+  for (const stop of route.stops) {
+    frames.push(
+      { time: Date.parse(stop.start), mile: stop.mile },
+      { time: Date.parse(stop.end), mile: stop.mile },
+    )
+  }
+  return frames.sort((a, b) => a.time - b.time || a.mile - b.mile)
+}
 
-  if (t >= times[last]) {
+/** Where the truck on `route` is at `moment`, placed on the route line. */
+export function truckPositionAt(route: PlannedRoute, moment: Date): TruckPosition {
+  const t = moment.getTime()
+  const frames = keyframes(route)
+  const finish = frames[frames.length - 1]
+
+  if (t >= finish.time) {
     return {
       position: route.geometry[route.geometry.length - 1],
-      mile: checkpoints[last].mile,
+      mile: finish.mile,
       arrived: true,
+      stop: null,
     }
   }
 
-  let mile = checkpoints[0].mile
-  for (let i = 0; i < last; i++) {
-    if (t >= times[i] && t < times[i + 1]) {
-      const f = (t - times[i]) / (times[i + 1] - times[i])
-      mile = checkpoints[i].mile + f * (checkpoints[i + 1].mile - checkpoints[i].mile)
+  let mile = frames[0].mile
+  for (let i = 0; i < frames.length - 1; i++) {
+    const [a, b] = [frames[i], frames[i + 1]]
+    if (t >= a.time && t < b.time) {
+      mile = a.mile + ((t - a.time) / (b.time - a.time)) * (b.mile - a.mile)
       break
     }
   }
+  const stop = route.stops.find((s) => t >= Date.parse(s.start) && t < Date.parse(s.end)) ?? null
   const fraction = route.distance_mi > 0 ? mile / route.distance_mi : 0
-  return { position: pointAlong(route.geometry, fraction), mile, arrived: false }
+  return { position: pointAlong(route.geometry, fraction), mile, arrived: false, stop }
 }
 
 /** Cells keyed by "row:col" for constant-time lookup. */

@@ -45,7 +45,8 @@ Request:
   "destination": { "lat": 39.7392, "lng": -104.9903 },
   "departure": "2026-11-07T14:00:00Z",
   "load_lb": 42000,
-  "spacing_mi": 25
+  "spacing_mi": 25,
+  "driver": "solo"
 }
 ```
 
@@ -54,6 +55,7 @@ Request:
 | `departure` | From 5 minutes ago (treated as now) to 7 days ahead. |
 | `load_lb` | Integer, 0 to 100,000. |
 | `spacing_mi` | One of 10, 25, 50. |
+| `driver` | `solo` (default) or `team`. A solo driver makes the stops required by US hours of service; a team keeps driving. |
 
 Response (abridged):
 
@@ -62,6 +64,7 @@ Response (abridged):
   "departure": "2026-11-07T14:00:00Z",
   "load_lb": 42000,
   "spacing_mi": 25,
+  "driver": "solo",
   "recommended_route_id": "B",
   "all_routes_blocked": false,
   "routes": [
@@ -71,8 +74,13 @@ Response (abridged):
       "recommended": true,
       "decided_by": null,
       "distance_mi": 931.8,
-      "duration_s": 47718,
-      "arrival": "2026-11-08T03:15:18Z",
+      "trip_duration_s": 85518,
+      "driving_duration_s": 47718,
+      "arrival": "2026-11-08T13:45:18Z",
+      "stops": [
+        { "kind": "break", "mile": 612.4, "position": [-101.8313, 35.2220], "start": "2026-11-07T22:00:00Z", "end": "2026-11-07T22:30:00Z" },
+        { "kind": "rest", "mile": 818.9, "position": [-103.2310, 37.8121], "start": "2026-11-08T01:30:00Z", "end": "2026-11-08T11:30:00Z" }
+      ],
       "risk": {
         "miles_by_level": { "low": 931.8, "moderate": 0, "high": 0, "severe": 0, "no_travel": 0 },
         "no_data_miles": 0,
@@ -105,6 +113,11 @@ Response (abridged):
 - `routes` are in **ranked order**; `id` (A, B, C) is the routing provider's order and stays stable.
 - `decided_by`: the first ranking criterion on which the recommended route beats this one
   (`no_travel_miles`, `severe_miles`, `high_miles`, `average_risk`, `duration`), or `null`.
+- `trip_duration_s` is door to door, including `stops`; it is the "travel time" the ranking
+  compares, and `arrival` is departure + `trip_duration_s`. `driving_duration_s` is wheel time only.
+- `stops` are the required driver stops in time order: `break` (30 min after 8 h of driving) and
+  `rest` (10 h after 11 h of driving). Always empty for `team`. Checkpoint `eta`s include every stop
+  made before the checkpoint.
 - Checkpoint `level` / `weather` are `null` when no forecast covers that place and time.
 - Heatmap `levels[h]` is the risk `h` hours after departure, as an integer
   (0 low, 1 moderate, 2 high, 3 severe, 4 no_travel; `null` = no data).

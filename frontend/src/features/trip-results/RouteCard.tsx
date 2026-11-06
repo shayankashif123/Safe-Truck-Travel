@@ -12,7 +12,7 @@ import { RiskBadge } from '../../shared/risk/RiskBadge'
 import { RiskBar } from '../../shared/risk/RiskBar'
 import { RISK_LABEL } from '../../shared/risk/riskLevels'
 import { RouteLetter } from '../../shared/ui/RouteLetter'
-import { compareOn, riskyMilesSummary } from './explain'
+import { compareOn, drivingSummary, riskyMilesSummary } from './explain'
 
 interface RouteCardProps {
   route: PlannedRoute
@@ -27,8 +27,9 @@ interface RouteCardProps {
  */
 export function RouteCard({ route, recommended, selected, onSelect }: RouteCardProps) {
   const isRecommended = route.id === recommended.id
+  const driving = drivingSummary(route)
   const deltas = [
-    formatDurationDelta(route.duration_s - recommended.duration_s),
+    formatDurationDelta(route.trip_duration_s - recommended.trip_duration_s),
     formatMilesDelta(route.distance_mi - recommended.distance_mi),
   ].filter(Boolean)
 
@@ -67,7 +68,7 @@ export function RouteCard({ route, recommended, selected, onSelect }: RouteCardP
           <Box>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
               <Typography variant="h3" component="p">
-                {formatDuration(route.duration_s)}
+                {formatDuration(route.trip_duration_s)}
               </Typography>
               {!isRecommended && deltas.length > 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
@@ -78,6 +79,11 @@ export function RouteCard({ route, recommended, selected, onSelect }: RouteCardP
             <Typography variant="body2" color="text.secondary">
               {formatMiles(route.distance_mi)} · Arrives {formatDayTime(route.arrival)}
             </Typography>
+            {driving && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {driving}
+              </Typography>
+            )}
           </Box>
 
           <Stack spacing={0.75}>

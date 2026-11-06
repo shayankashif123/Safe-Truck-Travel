@@ -99,6 +99,7 @@ export const CorridorHeatmap = memo(function CorridorHeatmap({
     routeId: route.id,
     mile: truck.mile,
     arrived: truck.arrived,
+    stopKind: truck.stop?.kind ?? null,
     level: levelIndex === null ? null : RISK_LEVELS[levelIndex],
   }
 

@@ -3,6 +3,7 @@ import PauseRounded from '@mui/icons-material/PauseRounded'
 import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded'
 import { Box, IconButton, Paper, Slider, Stack, Switch, Tooltip, Typography } from '@mui/material'
 
+import type { StopKind } from '../../shared/api/types'
 import { formatDayTime, formatPounds } from '../../shared/format/format'
 import { RiskBadge } from '../../shared/risk/RiskBadge'
 import type { RiskLevel } from '../../shared/risk/riskLevels'
@@ -12,6 +13,8 @@ export interface TruckStatus {
   routeId: string
   mile: number
   arrived: boolean
+  /** Set while the truck is parked for a required break or rest. */
+  stopKind: StopKind | null
   level: RiskLevel | null
 }
 
@@ -142,14 +145,26 @@ export function HeatmapPanel(props: HeatmapPanelProps) {
   )
 }
 
+const STOP_PHRASE: Record<StopKind, string> = {
+  break: 'on a 30-min break',
+  rest: 'resting (10 h)',
+}
+
+function truckText(truck: TruckStatus): string {
+  const subject = `Route ${truck.routeId} truck`
+  if (truck.arrived) return `${subject} has arrived`
+  const mile = `mile ${Math.round(truck.mile).toLocaleString('en-US')}`
+  return truck.stopKind
+    ? `${subject} ${STOP_PHRASE[truck.stopKind]} at ${mile}`
+    : `${subject} · ${mile}`
+}
+
 function TruckLine({ truck }: { truck: TruckStatus }) {
   return (
     <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.75 }}>
       <LocalShippingRounded sx={{ fontSize: 16, color: 'primary.main' }} />
       <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 500 }}>
-        {truck.arrived
-          ? `Route ${truck.routeId} truck has arrived`
-          : `Route ${truck.routeId} truck · mile ${Math.round(truck.mile).toLocaleString('en-US')}`}
+        {truckText(truck)}
       </Typography>
       {!truck.arrived && <RiskBadge level={truck.level ?? 'no_data'} />}
     </Stack>

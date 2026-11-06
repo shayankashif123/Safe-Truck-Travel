@@ -76,3 +76,12 @@ def test_route_rejects_a_profile_that_goes_backwards():
 
     with pytest.raises(ValueError):
         Route(points, backwards, 800, 120)
+
+
+def test_distance_at_is_the_inverse_of_elapsed_at():
+    profile = RouteProfile(straight_route(hours=2, first_half_share=0.75))
+
+    for distance in (0.0, profile.length_m / 4, profile.length_m / 2, profile.length_m * 0.9):
+        assert profile.distance_at(profile.elapsed_at(distance)) == pytest.approx(distance)
+    assert profile.distance_at(-10) == 0
+    assert profile.distance_at(10 * 3600) == pytest.approx(profile.length_m)

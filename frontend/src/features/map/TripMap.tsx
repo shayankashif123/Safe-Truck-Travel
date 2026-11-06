@@ -29,6 +29,7 @@ import {
 import { BASEMAP_STYLE_URL, maplibregl } from './maplibre'
 import { RiskLegend } from './RiskLegend'
 import { RouteLabel } from './RouteLabel'
+import { StopMarker } from './StopMarker'
 
 const INITIAL_VIEW = { longitude: -98.6, latitude: 39.5, zoom: 3.3 } // continental US
 const FIT_PADDING = 72
@@ -137,6 +138,8 @@ export default function TripMap({ plan, selectedRouteId, onSelectRoute, busy }: 
     ? plan?.routes.find((r) => r.id === active.routeId)?.checkpoints[active.index]
     : undefined
   const ends = plan?.routes[0]?.geometry
+  // Driver stops are shown for the selected route only, to keep the map calm.
+  const selectedStops = plan?.routes.find((r) => r.id === selectedRouteId)?.stops ?? []
 
   return (
     <Box sx={{ position: 'absolute', inset: 0 }}>
@@ -214,6 +217,24 @@ export default function TripMap({ plan, selectedRouteId, onSelectRoute, busy }: 
               />
             </Marker>
           ))}
+
+        {selectedStops.map((stop) => (
+          <Marker
+            key={`${selectedRouteId}-${stop.start}`}
+            longitude={stop.position[0]}
+            latitude={stop.position[1]}
+            anchor="center"
+            style={{ zIndex: 2 }}
+          >
+            <StopMarker
+              stop={stop}
+              onPointerEnter={() => {
+                setHovered(null)
+                setOverInteractive(false)
+              }}
+            />
+          </Marker>
+        ))}
 
         {ends && (
           <>

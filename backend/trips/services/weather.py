@@ -17,7 +17,10 @@ FORECAST_TTL_S = 30 * 60
 # every cell is fetched once for a fixed window starting at the current hour:
 # a later request with a different departure, load or spacing reuses it
 # instead of spending the rate limit again (DECISIONS W4).
-FETCH_HORIZON = timedelta(days=10)
+# 13 days = the latest departure (7 days ahead) plus a coast-to-coast solo trip
+# with required rests (~65 h of driving takes ~5 days), still under two weeks.
+# Anything beyond is reported as "no data", never as safe (DECISIONS T5).
+FETCH_HORIZON = timedelta(days=13)
 
 
 def forecasts_for_cells(

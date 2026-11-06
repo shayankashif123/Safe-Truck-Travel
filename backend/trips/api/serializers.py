@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from trips.domain.checkpoints import SUPPORTED_SPACINGS_MI
 from trips.domain.geo import LatLng
+from trips.domain.hours_of_service import DriverMode
 from trips.services.trip_planner import TripRequest
 
 MAX_LOAD_LB = 100_000
@@ -18,6 +19,8 @@ class TripPlanRequestSerializer(serializers.Serializer):
     departure = serializers.DateTimeField()  # ISO 8601; the frontend sends UTC
     load_lb = serializers.IntegerField(min_value=0, max_value=MAX_LOAD_LB)
     spacing_mi = serializers.ChoiceField(choices=SUPPORTED_SPACINGS_MI)
+    # Solo is the safe default: it never makes an ETA earlier than reality.
+    driver = serializers.ChoiceField(choices=[m.value for m in DriverMode], default=DriverMode.SOLO)
 
     def to_trip_request(self) -> TripRequest:
         data = self.validated_data
@@ -27,6 +30,7 @@ class TripPlanRequestSerializer(serializers.Serializer):
             departure=data["departure"],
             load_lb=data["load_lb"],
             spacing_mi=data["spacing_mi"],
+            driver=DriverMode(data["driver"]),
         )
 
 

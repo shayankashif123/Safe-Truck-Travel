@@ -13,7 +13,13 @@ from trips.domain.geometry import METERS_PER_MILE, simplify
 from trips.domain.levels import RiskLevel
 from trips.domain.ranking import Ranking
 from trips.providers.tomtom import Place, PlaceSuggestion
-from trips.services.trip_planner import Heatmap, PlannedCheckpoint, PlannedRoute, TripPlan
+from trips.services.trip_planner import (
+    Heatmap,
+    PlannedCheckpoint,
+    PlannedRoute,
+    PlannedStop,
+    TripPlan,
+)
 
 COORD_DECIMALS = 5  # ~1 m
 GEOMETRY_TOLERANCE_M = 25  # invisible at map zoom levels; ~10x fewer points
@@ -26,6 +32,7 @@ def present_trip_plan(plan: TripPlan) -> dict[str, Any]:
         "departure": iso(plan.departure),
         "load_lb": plan.request.load_lb,
         "spacing_mi": plan.request.spacing_mi,
+        "driver": str(plan.request.driver),
         "recommended_route_id": ranking.recommended.route_id,
         "all_routes_blocked": ranking.all_routes_blocked,
         "routes": [
@@ -49,8 +56,11 @@ def present_route(
         # Why the recommended route beats this one (None for the recommended route).
         "decided_by": None if recommended else _key_or_none(ranking.deciding_criterion(option)),
         "distance_mi": round(route.route.length_m / METERS_PER_MILE, 1),
-        "duration_s": round(route.route.duration_s),
-        "arrival": iso(departure + timedelta(seconds=route.route.duration_s)),
+        # Door to door including required stops; this is what the ranking compares.
+        "trip_duration_s": round(route.trip_duration_s),
+        "driving_duration_s": round(route.route.duration_s),
+        "arrival": iso(departure + timedelta(seconds=route.trip_duration_s)),
+        "stops": [present_stop(s) for s in route.stops],
         "risk": {
             "miles_by_level": {lvl.key: round(risk.miles(lvl), 1) for lvl in RiskLevel},
             "no_data_miles": round(risk.no_data_miles, 1),
@@ -79,6 +89,16 @@ def present_checkpoint(planned: PlannedCheckpoint) -> dict[str, Any]:
             "rain_in_per_hr": round(weather.rain_in_per_hr, 3),
             "snow_in_per_hr": round(weather.snow_in_per_hr, 3),
         },
+    }
+
+
+def present_stop(planned: PlannedStop) -> dict[str, Any]:
+    return {
+        "kind": str(planned.stop.kind),
+        "mile": round(planned.mile, 1),
+        "position": _coords(planned.position),
+        "start": iso(planned.start),
+        "end": iso(planned.end),
     }
 
 

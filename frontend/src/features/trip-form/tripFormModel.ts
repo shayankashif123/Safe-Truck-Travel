@@ -5,6 +5,7 @@
  */
 import type {
   CheckpointSpacing,
+  DriverMode,
   LngLat,
   PlaceSuggestion,
   TripPlanRequest,
@@ -21,11 +22,13 @@ export interface TripFormValues {
   departureLocal: string
   loadLb: number | null
   spacingMi: CheckpointSpacing
+  driver: DriverMode
 }
 
 export type TripFormErrors = Partial<Record<keyof TripFormValues, string>>
 
 export const SPACING_OPTIONS: readonly CheckpointSpacing[] = [10, 25, 50]
+export const DRIVER_OPTIONS: readonly DriverMode[] = ['solo', 'team']
 export const MAX_LOAD_LB = 100_000
 export const MAX_DEPARTURE_DAYS = 7
 const PAST_GRACE_MS = 5 * 60_000
@@ -39,6 +42,8 @@ export function initialTripFormValues(now: Date): TripFormValues {
     departureLocal: toLocalInputValue(nextQuarterHour(now)),
     loadLb: 40_000,
     spacingMi: 25,
+    // Solo is the safe default: required stops only ever make ETAs later.
+    driver: 'solo',
   }
 }
 
@@ -87,6 +92,7 @@ export function toTripPlanRequest(values: TripFormValues): TripPlanRequest {
     departure: departure.toISOString(),
     load_lb: loadLb,
     spacing_mi: values.spacingMi,
+    driver: values.driver,
   }
 }
 

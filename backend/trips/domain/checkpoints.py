@@ -60,6 +60,13 @@ class RouteProfile:
         f = _fraction(d, self._mark_distances[i], self._mark_distances[i + 1])
         return self._mark_times[i] + (self._mark_times[i + 1] - self._mark_times[i]) * f
 
+    def distance_at(self, elapsed_s: float) -> float:
+        """Distance covered after `elapsed_s` of driving: the inverse of elapsed_at."""
+        t = max(0.0, min(elapsed_s, self._mark_times[-1]))
+        i = _segment_index(self._mark_times, t)
+        f = _fraction(t, self._mark_times[i], self._mark_times[i + 1])
+        return self._mark_distances[i] + (self._mark_distances[i + 1] - self._mark_distances[i]) * f
+
     def _clamp(self, distance_m: float) -> float:
         return max(0.0, min(distance_m, self.length_m))
 

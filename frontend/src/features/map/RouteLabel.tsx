@@ -41,7 +41,7 @@ export function RouteLabel({ route, selected, onSelect }: RouteLabelProps) {
         variant="caption"
         sx={{ fontWeight: 600, color: 'text.primary', fontVariantNumeric: 'tabular-nums' }}
       >
-        {formatDuration(route.duration_s)} · {formatMiles(route.distance_mi)}
+        {formatDuration(route.trip_duration_s)} · {formatMiles(route.distance_mi)}
       </Typography>
       {route.recommended && (
         <CheckRounded

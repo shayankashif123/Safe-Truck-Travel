@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import type { PlannedRoute, RankingCriterion, TripPlan } from '../../shared/api/types'
 import type { RiskLevel } from '../../shared/risk/riskLevels'
-import { compareOn, riskyMilesSummary, sameRiskyMiles, summarizeRecommendation } from './explain'
+import {
+  compareOn,
+  drivingSummary,
+  riskyMilesSummary,
+  sameRiskyMiles,
+  summarizeRecommendation,
+} from './explain'
 
 function route(
   id: string,
@@ -32,8 +38,10 @@ function route(
     recommended: false,
     decided_by: decidedBy,
     distance_mi: distance,
-    duration_s: hours * 3600,
+    trip_duration_s: hours * 3600,
+    driving_duration_s: hours * 3600,
     arrival: '2026-11-08T03:00:00Z',
+    stops: [],
     risk: {
       miles_by_level: byLevel,
       no_data_miles: noData,
@@ -50,6 +58,7 @@ function plan(routes: PlannedRoute[], blocked = false): TripPlan {
     departure: '2026-11-07T14:00:00Z',
     load_lb: 40_000,
     spacing_mi: 25,
+    driver: 'solo',
     recommended_route_id: routes[0].id,
     all_routes_blocked: blocked,
     routes,
@@ -76,7 +85,7 @@ describe('compareOn', () => {
       'Lower average risk than Route B (0.05 vs 0.06)',
     )
     expect(compareOn('duration', b, a, 'better')).toBe(
-      'Shorter drive than Route A (12 h 30 min vs 13 h)',
+      'Shorter trip than Route A (12 h 30 min vs 13 h)',
     )
   })
 })
@@ -151,5 +160,32 @@ describe('sameRiskyMiles', () => {
     expect(
       sameRiskyMiles(route('A', { miles: { high: 5 } }), route('B', { miles: { severe: 5 } })),
     ).toBe(false)
+  })
+})
+
+describe('drivingSummary', () => {
+  const stop = (kind: 'break' | 'rest') => ({
+    kind,
+    mile: 0,
+    position: [0, 0] as [number, number],
+    start: '2026-11-07T22:00:00Z',
+    end: '2026-11-07T22:30:00Z',
+  })
+
+  it('is null when the truck makes no stops', () => {
+    expect(drivingSummary(route('A'))).toBeNull()
+  })
+
+  it('explains where the extra time of a solo trip comes from', () => {
+    const solo = { ...route('A', { hours: 12.8 }), stops: [stop('break'), stop('rest')] }
+    expect(drivingSummary(solo)).toBe('12 h 48 min driving + 1 break (30 min) + 1 rest (10 h)')
+  })
+
+  it('counts repeated stops', () => {
+    const long = {
+      ...route('A', { hours: 30 }),
+      stops: ['break', 'rest', 'break', 'rest'].map((k) => stop(k as 'break' | 'rest')),
+    }
+    expect(drivingSummary(long)).toBe('30 h driving + 2 breaks (30 min each) + 2 rests (10 h each)')
   })
 })

@@ -8,6 +8,12 @@ export type LngLat = [number, number]
 
 export type CheckpointSpacing = 10 | 25 | 50
 
+/** Solo drivers stop for breaks and rest (US hours of service); a team keeps driving. */
+export type DriverMode = 'solo' | 'team'
+
+/** A 30-minute break after 8 h of driving, or a 10-hour rest after 11 h. */
+export type StopKind = 'break' | 'rest'
+
 export type RankingCriterion =
   'no_travel_miles' | 'severe_miles' | 'high_miles' | 'average_risk' | 'duration'
 
@@ -33,6 +39,7 @@ export interface TripPlanRequest {
   departure: string
   load_lb: number
   spacing_mi: CheckpointSpacing
+  driver: DriverMode
 }
 
 export interface CheckpointWeather {
@@ -52,6 +59,14 @@ export interface Checkpoint {
   weather: CheckpointWeather | null
 }
 
+export interface RouteStop {
+  kind: StopKind
+  mile: number
+  position: LngLat
+  start: string
+  end: string
+}
+
 export interface RouteRisk {
   miles_by_level: Record<RiskLevel, number>
   no_data_miles: number
@@ -65,8 +80,12 @@ export interface PlannedRoute {
   recommended: boolean
   decided_by: RankingCriterion | null
   distance_mi: number
-  duration_s: number
+  /** Door to door, including required stops; what the ranking compares. */
+  trip_duration_s: number
+  driving_duration_s: number
   arrival: string
+  /** Required driver stops in the order they happen (empty for a team). */
+  stops: RouteStop[]
   risk: RouteRisk
   geometry: LngLat[]
   checkpoints: Checkpoint[]
@@ -90,6 +109,7 @@ export interface TripPlan {
   departure: string
   load_lb: number
   spacing_mi: CheckpointSpacing
+  driver: DriverMode
   recommended_route_id: string
   all_routes_blocked: boolean
   /** Ranked order: the recommended route first. */

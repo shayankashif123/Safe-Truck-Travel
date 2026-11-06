@@ -4,6 +4,7 @@ import { type FormEvent, useState } from 'react'
 
 import type { TripPlanRequest } from '../../shared/api/types'
 import { DepartureField } from './DepartureField'
+import { DriverField } from './DriverField'
 import { LoadField } from './LoadField'
 import { PlacePairField } from './PlacePairField'
 import { SpacingField } from './SpacingField'
@@ -108,6 +109,7 @@ export function TripForm({ onSubmit, submitting }: TripFormProps) {
           onChange={(value) => update('loadLb', value)}
           error={errors.loadLb}
         />
+        <DriverField value={values.driver} onChange={(value) => update('driver', value)} />
         <SpacingField value={values.spacingMi} onChange={(value) => update('spacingMi', value)} />
 
         <Button

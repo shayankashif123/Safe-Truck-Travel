@@ -32,11 +32,12 @@ function valid(overrides: Partial<TripFormValues> = {}): TripFormValues {
 }
 
 describe('initial values', () => {
-  it('departs at the next quarter hour with a 40,000 lb load and 25 mi spacing', () => {
+  it('departs at the next quarter hour with a 40,000 lb load, 25 mi spacing and a solo driver', () => {
     const values = initialTripFormValues(NOW)
     expect(values.departureLocal).toBe('2026-11-07T13:15')
     expect(values.loadLb).toBe(40_000)
     expect(values.spacingMi).toBe(25)
+    expect(values.driver).toBe('solo')
   })
 
   it('keeps a time already on a quarter hour', () => {
@@ -108,6 +109,11 @@ describe('toTripPlanRequest', () => {
     expect(request.departure).toBe(new Date(2026, 10, 7, 14, 0).toISOString())
     expect(request.load_lb).toBe(40_000)
     expect(request.spacing_mi).toBe(25)
+    expect(request.driver).toBe('solo')
+  })
+
+  it('sends the chosen driver mode', () => {
+    expect(toTripPlanRequest(valid({ driver: 'team' })).driver).toBe('team')
   })
 })
 
