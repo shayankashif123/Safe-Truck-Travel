@@ -5,6 +5,7 @@ import type { RiskLevel } from '../../shared/risk/riskLevels'
 import {
   compareOn,
   drivingSummary,
+  routeCountNote,
   samplingNote,
   riskyMilesSummary,
   sameRiskyMiles,
@@ -222,6 +223,24 @@ describe('drivingSummary', () => {
       stops: ['break', 'rest', 'break', 'rest'].map((k) => stop(k as 'break' | 'rest')),
     }
     expect(drivingSummary(long)).toBe('30 h driving + 2 breaks (30 min each) + 2 rests (10 h each)')
+  })
+})
+
+describe('routeCountNote', () => {
+  it('stays quiet when all three requested routes came back', () => {
+    expect(routeCountNote(plan([route('A'), route('B'), route('C')]))).toBeNull()
+  })
+
+  it('explains a list of two as the routing provider’s answer', () => {
+    expect(routeCountNote(plan([route('A'), route('B')]))).toBe(
+      'TomTom found only 2 distinct truck routes for this trip.',
+    )
+  })
+
+  it('says when there was no alternative at all', () => {
+    expect(routeCountNote(plan([route('A')]))).toBe(
+      'TomTom found no alternative truck route for this trip.',
+    )
   })
 })
 

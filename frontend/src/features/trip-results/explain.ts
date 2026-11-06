@@ -129,6 +129,21 @@ export function drivingSummary(route: PlannedRoute): string | null {
 const FINEST_CHECKPOINT_GRID_DEG = 0.0625
 const MILES_PER_DEGREE_LAT = 69
 
+/** How many options the backend asks the routing provider for (TomTom maxAlternatives=2). */
+export const REQUESTED_ROUTE_COUNT = 3
+
+/**
+ * A note when the routing provider found fewer routes than requested, so a
+ * short list reads as the provider's answer, not a bug. Routes are never
+ * invented to fill the list (docs/DECISIONS.md K6).
+ */
+export function routeCountNote(plan: TripPlan): string | null {
+  const count = plan.routes.length
+  if (count >= REQUESTED_ROUTE_COUNT) return null
+  if (count === 1) return 'TomTom found no alternative truck route for this trip.'
+  return `TomTom found only ${count} distinct truck routes for this trip.`
+}
+
 /**
  * A note when checkpoint weather had to come from a coarser grid (very long
  * trips at fine spacing), so the driver knows the sampling is coarser than asked.
