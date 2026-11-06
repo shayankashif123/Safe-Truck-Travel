@@ -2,6 +2,7 @@ import { Box, LinearProgress, Stack, Typography } from '@mui/material'
 
 import { formatLocalTime, formatPounds } from '../../shared/format/format'
 import type { TripPlanner } from '../trip-planner/useTripPlanner'
+import { samplingNote } from './explain'
 import { RecommendationSummary } from './RecommendationSummary'
 import { ResultsError } from './ResultsError'
 import { ResultsIntro } from './ResultsIntro'
@@ -19,6 +20,7 @@ export function TripResults({ planner }: { planner: TripPlanner }) {
   // so a sub-second refresh does not flash skeletons.
   const refreshing = status === 'loading'
   const recommended = plan.routes[0]
+  const note = samplingNote(plan)
 
   return (
     <Box component="section" aria-label="Route comparison" aria-busy={refreshing}>
@@ -32,6 +34,11 @@ export function TripResults({ planner }: { planner: TripPlanner }) {
             Departs {formatLocalTime(plan.departure, plan.origin_time_zone)} ·{' '}
             {formatPounds(plan.load_lb)} · checkpoint every {plan.spacing_mi} mi
           </Typography>
+          {note && (
+            <Typography variant="caption" color="warning.dark" component="p" sx={{ mt: 0.5 }}>
+              {note}
+            </Typography>
+          )}
         </Box>
 
         <RecommendationSummary plan={plan} />

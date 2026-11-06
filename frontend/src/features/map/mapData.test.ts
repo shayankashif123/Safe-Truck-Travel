@@ -37,6 +37,7 @@ function route(id: string, geometry: LngLat[], levels: (string | null)[] = []): 
 function plan(routes: PlannedRoute[]): TripPlan {
   return {
     departure: '2026-11-07T14:00:00Z',
+    checkpoint_resolution_deg: 0.0625,
     origin_time_zone: 'America/Chicago',
     destination_time_zone: 'America/Denver',
     load_lb: 40_000,

@@ -111,6 +111,8 @@ export interface Heatmap {
 
 export interface TripPlan {
   departure: string
+  /** Weather grid behind checkpoint forecasts: 0.0625 deg normally, coarser on very long trips. */
+  checkpoint_resolution_deg: number
   origin_time_zone: string | null
   destination_time_zone: string | null
   load_lb: number

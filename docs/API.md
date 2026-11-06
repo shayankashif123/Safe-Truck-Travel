@@ -64,6 +64,7 @@ Response (abridged):
 ```json
 {
   "departure": "2026-11-07T14:00:00Z",
+  "checkpoint_resolution_deg": 0.0625,
   "origin_time_zone": "America/Chicago",
   "destination_time_zone": "America/Denver",
   "load_lb": 42000,
@@ -123,6 +124,9 @@ Response (abridged):
 - `stops` are the required driver stops in time order: `break` (30 min after 8 h of driving) and
   `rest` (10 h after 11 h of driving). Always empty for `team`. Checkpoint `eta`s include every stop
   made before the checkpoint.
+- `checkpoint_resolution_deg`: grid behind checkpoint forecasts, 0.0625 (~4 mi) normally,
+  coarser only when a very long trip at fine spacing would exceed the per-trip weather quota.
+  The heatmap's own grid is `heatmap.resolution_deg`.
 - Checkpoint `level` / `weather` are `null` when no forecast covers that place and time.
 - Heatmap `levels[h]` is the risk `h` hours after departure, as an integer
   (0 low, 1 moderate, 2 high, 3 severe, 4 no_travel; `null` = no data).

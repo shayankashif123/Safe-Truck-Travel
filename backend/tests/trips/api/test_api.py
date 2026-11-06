@@ -85,6 +85,7 @@ def test_plan_reports_origin_and_destination_time_zones(api, fake_providers):
     body = api.post(PLAN_URL, payload(), format="json").json()
 
     assert body["origin_time_zone"] == "America/Chicago"
+    assert body["checkpoint_resolution_deg"] == 0.0625
     assert body["destination_time_zone"] == "America/Chicago"
 
 

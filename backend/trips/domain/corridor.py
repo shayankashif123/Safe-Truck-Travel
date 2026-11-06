@@ -1,9 +1,8 @@
 """
 The trip corridor: every weather-grid cell within a fixed radius of any route.
 
-The heatmap shows these cells, and they are fetched in the same batch as the
-checkpoint cells. The grid coarsens automatically on long trips so one trip
-never needs more than MAX_CORRIDOR_CELLS weather locations (DECISIONS H3, W1).
+The heatmap shows these cells. The grid resolution is chosen in
+weather_sampling.py, together with the checkpoint grid (DECISIONS H3, W1).
 """
 
 import math
@@ -12,26 +11,13 @@ from collections.abc import Sequence
 from trips.domain.checkpoints import RouteProfile
 from trips.domain.geo import LatLng
 from trips.domain.geometry import METERS_PER_DEGREE_LAT, METERS_PER_MILE, haversine_m
-from trips.domain.weather_grid import SUPPORTED_RESOLUTIONS_DEG, GridCell, cell_for
+from trips.domain.weather_grid import GridCell, cell_for
 
-CORRIDOR_RADIUS_M = 20 * METERS_PER_MILE
-# Open-Meteo's free tier allows 600 locations per minute; one trip may use at
-# most two thirds of that, so a second trip in the same minute still succeeds.
-MAX_CORRIDOR_CELLS = 400
-
-
-def choose_corridor(
-    profiles: Sequence[RouteProfile],
-    *,
-    radius_m: float = CORRIDOR_RADIUS_M,
-    max_cells: int = MAX_CORRIDOR_CELLS,
-) -> tuple[float, set[GridCell]]:
-    """The finest grid resolution whose corridor fits in `max_cells`, and its cells."""
-    for resolution in SUPPORTED_RESOLUTIONS_DEG:
-        cells = corridor_cells(profiles, resolution, radius_m)
-        if len(cells) <= max_cells:
-            return resolution, cells
-    return resolution, cells  # coarsest grid, even if still over budget
+# Cells within 12 miles of a route, plus every cell it passes through: a band of
+# 2-3 quarter-degree cells. Measured on real trips, 20 miles cost ~70% more
+# weather locations and pushed a same-minute spacing change over Open-Meteo's
+# per-minute limit (DECISIONS H3).
+CORRIDOR_RADIUS_M = 12 * METERS_PER_MILE
 
 
 def corridor_cells(

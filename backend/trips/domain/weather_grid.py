@@ -1,9 +1,9 @@
 """
-A fixed lat/lng grid shared by checkpoints and the heatmap.
+Fixed lat/lng grids for weather requests.
 
-Weather is fetched once per cell, at the cell's center. Checkpoints and heatmap
-cells that fall in the same cell therefore show identical weather, and nearby
-or overlapping routes share requests (docs/DECISIONS.md W1).
+Weather is fetched once per cell, at the cell's center, so nearby or
+overlapping routes share requests and repeated trips hit the cache. Checkpoints
+use a fine grid and the heatmap a coarser one (docs/DECISIONS.md W1).
 """
 
 import math
@@ -12,8 +12,9 @@ from dataclasses import dataclass
 from trips.domain.geo import LatLng
 
 # Binary fractions only, so row * resolution has no floating-point error.
-SUPPORTED_RESOLUTIONS_DEG = (0.25, 0.5, 1.0)
-DEFAULT_RESOLUTION_DEG = 0.25  # ~17 x 14 miles at US latitudes
+# At US latitudes: 1/16 deg ~ 4 x 3.5 mi, 1/8 ~ 9 x 7, 1/4 ~ 17 x 14, 1/2, 1.
+SUPPORTED_RESOLUTIONS_DEG = (0.0625, 0.125, 0.25, 0.5, 1.0)
+DEFAULT_RESOLUTION_DEG = 0.25
 
 
 @dataclass(frozen=True, slots=True, order=True)

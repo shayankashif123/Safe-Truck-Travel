@@ -220,6 +220,31 @@ def test_checkpoints_and_stops_carry_the_local_time_zone_of_their_place():
     assert all(s.time_zone == "America/Chicago" for s in result.routes[0].stops)
 
 
+# --- Weather sampling -------------------------------------------------------------
+
+
+def wind_varies_with_longitude(location, moment):
+    """Wind changes every ~4 miles eastwards, so each grid cell reads its own value."""
+    return 5.0 + round((location.lng + 100.0) * 20, 2)
+
+
+def test_neighbouring_checkpoints_read_their_own_forecast():
+    # 10-mile spacing: with a shared 1/4-degree grid, ~1 in 3 neighbours used to
+    # read the same forecast (DECISIONS W1).
+    south = plan(weather=FieldWeather(wind_varies_with_longitude)).routes[0]
+
+    winds = [c.weather.wind_mph for c in south.checkpoints]
+    assert len(winds) > 5
+    assert all(a != b for a, b in zip(winds, winds[1:], strict=False))
+    assert plan().checkpoint_resolution_deg == 0.0625
+
+
+def test_the_heatmap_keeps_its_own_coarser_grid():
+    result = plan()
+
+    assert {c.cell.resolution_deg for c in result.heatmap.cells} == {0.25}
+
+
 # --- Heatmap ---------------------------------------------------------------------
 
 
@@ -232,7 +257,7 @@ def test_heatmap_has_a_level_for_every_cell_and_frame():
     assert all(len(cell.levels) == HEATMAP_FRAMES for cell in heatmap.cells)
 
 
-def test_heatmap_includes_every_checkpoint_cell():
+def test_heatmap_covers_every_checkpoint_location():
     result = plan()
 
     heatmap_cells = {c.cell for c in result.heatmap.cells}

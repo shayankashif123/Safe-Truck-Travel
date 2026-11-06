@@ -97,6 +97,23 @@ export function drivingSummary(route: PlannedRoute): string | null {
   return parts.join(' + ')
 }
 
+/** The finest checkpoint weather grid (1/16 deg, ~4 mi); see docs/DECISIONS.md W1. */
+const FINEST_CHECKPOINT_GRID_DEG = 0.0625
+const MILES_PER_DEGREE_LAT = 69
+
+/**
+ * A note when checkpoint weather had to come from a coarser grid (very long
+ * trips at fine spacing), so the driver knows the sampling is coarser than asked.
+ */
+export function samplingNote(plan: TripPlan): string | null {
+  if (plan.checkpoint_resolution_deg <= FINEST_CHECKPOINT_GRID_DEG) return null
+  const miles = Math.round(plan.checkpoint_resolution_deg * MILES_PER_DEGREE_LAT)
+  return (
+    `Long trip: checkpoint weather comes from a ~${miles}-mile grid ` +
+    'to stay within the free forecast quota.'
+  )
+}
+
 export type SummaryTone = 'success' | 'warning' | 'error'
 
 export interface RecommendationSummary {

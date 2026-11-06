@@ -5,6 +5,7 @@ import type { RiskLevel } from '../../shared/risk/riskLevels'
 import {
   compareOn,
   drivingSummary,
+  samplingNote,
   riskyMilesSummary,
   sameRiskyMiles,
   summarizeRecommendation,
@@ -56,6 +57,7 @@ function route(
 function plan(routes: PlannedRoute[], blocked = false): TripPlan {
   return {
     departure: '2026-11-07T14:00:00Z',
+    checkpoint_resolution_deg: 0.0625,
     origin_time_zone: 'America/Chicago',
     destination_time_zone: 'America/Denver',
     load_lb: 40_000,
@@ -190,5 +192,18 @@ describe('drivingSummary', () => {
       stops: ['break', 'rest', 'break', 'rest'].map((k) => stop(k as 'break' | 'rest')),
     }
     expect(drivingSummary(long)).toBe('30 h driving + 2 breaks (30 min each) + 2 rests (10 h each)')
+  })
+})
+
+describe('samplingNote', () => {
+  it('stays quiet when checkpoints use the finest grid', () => {
+    expect(samplingNote(plan([route('A')]))).toBeNull()
+  })
+
+  it('says when a long trip had to sample weather more coarsely', () => {
+    const coarse = { ...plan([route('A')]), checkpoint_resolution_deg: 0.5 }
+    expect(samplingNote(coarse)).toBe(
+      'Long trip: checkpoint weather comes from a ~35-mile grid to stay within the free forecast quota.',
+    )
   })
 })

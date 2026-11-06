@@ -30,6 +30,8 @@ def present_trip_plan(plan: TripPlan) -> dict[str, Any]:
     by_id = {route.id: route for route in plan.routes}
     return {
         "departure": iso(plan.departure),
+        # Grid behind checkpoint forecasts: 0.0625 normally, coarser on very long trips.
+        "checkpoint_resolution_deg": plan.checkpoint_resolution_deg,
         # IANA zones: the UI shows each time in local time at its place (DECISIONS T4).
         "origin_time_zone": plan.origin_time_zone,
         "destination_time_zone": plan.destination_time_zone,

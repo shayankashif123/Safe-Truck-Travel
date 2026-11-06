@@ -1,6 +1,6 @@
 from tests.factories import straight_route
 from trips.domain.checkpoints import RouteProfile
-from trips.domain.corridor import CORRIDOR_RADIUS_M, choose_corridor, corridor_cells
+from trips.domain.corridor import CORRIDOR_RADIUS_M, corridor_cells
 from trips.domain.geo import LatLng
 from trips.domain.geometry import METERS_PER_MILE, haversine_m
 from trips.domain.weather_grid import cell_for
@@ -51,20 +51,3 @@ def test_overlapping_routes_share_cells():
 
     assert shared == separate
     assert len(shared) < 2 * len(corridor_cells([a], 0.25, CORRIDOR_RADIUS_M))
-
-
-def test_uses_the_finest_grid_that_fits_the_budget():
-    resolution, cells = choose_corridor([profile(length_deg=3)], max_cells=10_000)
-
-    assert resolution == 0.25
-    assert all(c.resolution_deg == 0.25 for c in cells)
-
-
-def test_long_trips_coarsen_the_grid_to_stay_within_budget():
-    long_trip = [profile(length_deg=20, n_points=401)]
-    fine = corridor_cells(long_trip, 0.25, CORRIDOR_RADIUS_M)
-
-    resolution, cells = choose_corridor(long_trip, max_cells=len(fine) - 1)
-
-    assert resolution > 0.25
-    assert len(cells) < len(fine)

@@ -7,12 +7,12 @@ Plan a trip end to end:
 This module only orchestrates. Every rule it applies lives in trips.domain.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from trips.domain.checkpoints import Checkpoint, RouteProfile, place_checkpoints
 from trips.domain.classification import RiskAssessment, WeatherSample, assess_risk
-from trips.domain.corridor import choose_corridor
 from trips.domain.errors import InvalidInput
 from trips.domain.forecast import HourlyForecast, floor_hour
 from trips.domain.geo import LatLng
@@ -22,7 +22,8 @@ from trips.domain.levels import RiskLevel
 from trips.domain.ranking import Ranking, RouteOption, rank_routes
 from trips.domain.routes import Route
 from trips.domain.scoring import RoutePoint, RouteRiskSummary, summarize_route
-from trips.domain.weather_grid import GridCell, cell_for
+from trips.domain.weather_grid import GridCell
+from trips.domain.weather_sampling import choose_sampling
 from trips.providers.errors import NoRouteFound
 from trips.providers.open_meteo import OpenMeteoClient
 from trips.providers.tomtom import PROVIDER as ROUTING_PROVIDER
@@ -109,6 +110,7 @@ class Heatmap:
 class TripPlan:
     request: TripRequest
     departure: datetime  # effective departure (never in the past)
+    checkpoint_resolution_deg: float  # weather grid behind checkpoint forecasts
     origin_time_zone: str | None
     destination_time_zone: str | None
     routes: tuple[PlannedRoute, ...]  # routing-provider order
@@ -135,9 +137,8 @@ def plan_trip(
 
     profiles = [RouteProfile(route) for route in routes]
     schedules = [schedule_drive(route.duration_s, request.driver) for route in routes]
-    resolution, corridor = choose_corridor(profiles)
     checkpoints = [place_checkpoints(profile, request.spacing_mi) for profile in profiles]
-    checkpoint_cells = [[cell_for(cp.position, resolution) for cp in cps] for cps in checkpoints]
+    sampling = choose_sampling(profiles, checkpoints)
 
     # One window covers every checkpoint ETA and every heatmap frame. The extra
     # hour is the precipitation bucket that follows the last moment (DECISIONS T2).
@@ -147,9 +148,8 @@ def plan_trip(
     )
     window_end = floor_hour(last_moment) + timedelta(hours=1)
 
-    all_cells = corridor.union(*checkpoint_cells)
     forecasts = forecasts_for_cells(
-        all_cells, window_start, window_end, now=now, client=weather_client
+        sampling.locations, window_start, window_end, now=now, client=weather_client
     )
 
     planned = tuple(
@@ -157,14 +157,20 @@ def plan_trip(
             ROUTE_IDS[i], profile, schedule, cps, cells, forecasts, departure, request.load_lb
         )
         for i, (profile, schedule, cps, cells) in enumerate(
-            zip(profiles, schedules, checkpoints, checkpoint_cells, strict=True)
+            zip(profiles, schedules, checkpoints, sampling.checkpoint_cells, strict=True)
         )
     )
     ranking = rank_routes([RouteOption(r.id, r.trip_duration_s, r.risk) for r in planned])
-    heatmap = _build_heatmap(forecasts, departure, resolution, request.load_lb)
+    heatmap = _build_heatmap(
+        {cell: forecasts[cell] for cell in sampling.corridor},
+        departure,
+        sampling.corridor_resolution_deg,
+        request.load_lb,
+    )
     return TripPlan(
         request=request,
         departure=departure,
+        checkpoint_resolution_deg=sampling.checkpoint_resolution_deg,
         origin_time_zone=time_zone_at(request.origin),
         destination_time_zone=time_zone_at(request.destination),
         routes=planned,
@@ -178,7 +184,7 @@ def _plan_route(
     profile: RouteProfile,
     schedule: DrivingSchedule,
     checkpoints: list[Checkpoint],
-    cells: list[GridCell],
+    cells: Sequence[GridCell],
     forecasts: dict[GridCell, HourlyForecast],
     departure: datetime,
     load_lb: int,
