@@ -11,7 +11,7 @@ scores the risk with the brief's rules, and recommends the safest route. A corri
 
 - **Live app:** https://safe-truck-travel.onrender.com
 - **Source:** https://github.com/shayankashif123/Safe-Truck-Travel
-- **Walkthrough (Loom):** _link added on submission_
+- **Walkthrough video:** https://youtu.be/0hgJadK3Uv0
 
 > The app runs on Render's free plan. If nobody has opened it for a while it can take about a
 > minute to wake up; the first trip after that takes roughly 10 seconds (a repeat takes about 1).
