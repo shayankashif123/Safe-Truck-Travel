@@ -1,4 +1,8 @@
-# Weather-Aware Truck Routing
+<p align="center">
+  <img src="docs/brand/safe-truck-travels-logo.png" alt="Safe Truck Travels" width="320" />
+</p>
+
+# Safe Truck Travels: weather-aware truck routing
 
 Compare truck routes by forecast weather risk at the truck's arrival time,
 load weight and travel time, and get a clear recommendation.
