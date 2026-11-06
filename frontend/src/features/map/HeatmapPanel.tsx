@@ -1,7 +1,22 @@
+import ExpandLessRounded from '@mui/icons-material/ExpandLessRounded'
+import ExpandMoreRounded from '@mui/icons-material/ExpandMoreRounded'
 import LocalShippingRounded from '@mui/icons-material/LocalShippingRounded'
 import PauseRounded from '@mui/icons-material/PauseRounded'
 import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded'
-import { Box, IconButton, Paper, Slider, Stack, Switch, Tooltip, Typography } from '@mui/material'
+import {
+  Box,
+  Collapse,
+  IconButton,
+  Paper,
+  Slider,
+  Stack,
+  Switch,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material'
+import { useState } from 'react'
 
 import type { StopKind } from '../../shared/api/types'
 import { formatLocalTime, formatPounds } from '../../shared/format/format'
@@ -38,6 +53,12 @@ const MARK_STEP_H = 12
 /** The heatmap's control surface: visibility, time scrubber, truck status, legend. */
 export function HeatmapPanel(props: HeatmapPanelProps) {
   const { frame, lastFrame, frameTimeIso, playing, visible, truck } = props
+  const theme = useTheme()
+  // In the stacked (phone/tablet) layout the map is short, so the details start
+  // folded away; time, play and slider always stay visible.
+  const stacked = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true })
+  const [expandedChoice, setExpandedChoice] = useState<boolean | null>(null)
+  const expanded = expandedChoice ?? !stacked
   const when = formatLocalTime(frameTimeIso, props.timeZone)
   const offset = frame === 0 ? 'At departure' : `Departure + ${frame} h`
   const marks = Array.from({ length: Math.floor(lastFrame / MARK_STEP_H) + 1 }, (_, i) => ({
@@ -76,12 +97,30 @@ export function HeatmapPanel(props: HeatmapPanelProps) {
             Weather risk along the corridor
           </Typography>
         </Box>
-        <Switch
-          size="small"
-          checked={visible}
-          onChange={props.onToggleVisible}
-          slotProps={{ input: { 'aria-label': 'Show weather risk layer' } }}
-        />
+        <Stack direction="row" sx={{ alignItems: 'center', mr: -0.75 }}>
+          <Switch
+            size="small"
+            checked={visible}
+            onChange={props.onToggleVisible}
+            slotProps={{ input: { 'aria-label': 'Show weather risk layer' } }}
+          />
+          <Tooltip title={expanded ? 'Hide details' : 'Show truck and legend'}>
+            <IconButton
+              size="small"
+              aria-label="Truck position and legend"
+              aria-expanded={expanded}
+              aria-controls="heatmap-panel-details"
+              onClick={() => setExpandedChoice(!expanded)}
+            >
+              {/* The panel grows upwards from the bottom edge, so "more" points up. */}
+              {expanded ? (
+                <ExpandMoreRounded fontSize="small" />
+              ) : (
+                <ExpandLessRounded fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
+        </Stack>
       </Stack>
 
       {/* Readout first, scrubber second: the answer sits above the control. */}
@@ -128,6 +167,8 @@ export function HeatmapPanel(props: HeatmapPanelProps) {
                 top: 22,
                 fontSize: '0.6875rem',
                 color: 'text.secondary',
+                // MUI pads the slider for touch (coarse pointers); keep labels below the thumb.
+                '@media (pointer: coarse)': { top: 30 },
               },
               '& .MuiSlider-thumb': { width: 14, height: 14 },
             }}
@@ -135,14 +176,16 @@ export function HeatmapPanel(props: HeatmapPanelProps) {
         </Box>
       </Stack>
 
-      {truck && <TruckLine truck={truck} />}
+      <Collapse in={expanded} id="heatmap-panel-details">
+        {truck && <TruckLine truck={truck} />}
 
-      <Box sx={{ mt: 1.25, pt: 1.25, borderTop: 1, borderColor: 'divider' }}>
-        <RiskLegendRow />
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-          Includes the wind load rules for {formatPounds(props.loadLb)}.
-        </Typography>
-      </Box>
+        <Box sx={{ mt: 1.25, pt: 1.25, borderTop: 1, borderColor: 'divider' }}>
+          <RiskLegendRow />
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+            Includes the wind load rules for {formatPounds(props.loadLb)}.
+          </Typography>
+        </Box>
+      </Collapse>
     </Paper>
   )
 }

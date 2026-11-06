@@ -16,7 +16,7 @@ export type DriverMode = 'solo' | 'team'
 export type StopKind = 'break' | 'rest'
 
 export type RankingCriterion =
-  'no_travel_miles' | 'severe_miles' | 'high_miles' | 'average_risk' | 'duration'
+  'no_travel_miles' | 'no_data_miles' | 'severe_miles' | 'high_miles' | 'average_risk' | 'duration'
 
 export type RiskFactor = 'wind' | 'rain' | 'snow'
 

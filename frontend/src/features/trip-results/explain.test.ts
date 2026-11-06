@@ -82,6 +82,26 @@ describe('compareOn', () => {
     )
   })
 
+  it('never words a deciding difference as two equal numbers', () => {
+    // Ranked at 0.1 mi: 0.4 vs 0 and 12.3 vs 12.4 decide, so both must be visible.
+    const short = route('A', { miles: { severe: 0.4 } })
+    expect(compareOn('severe_miles', route('B'), short, 'better')).toBe(
+      'Fewer Severe miles than Route A (0 mi vs 0.4 mi)',
+    )
+    const a = route('A', { miles: { high: 12.3 } })
+    const b = route('B', { miles: { high: 12.4 } })
+    expect(compareOn('high_miles', a, b, 'better')).toBe(
+      'Fewer High miles than Route B (12.3 mi vs 12.4 mi)',
+    )
+  })
+
+  it('words missing forecasts as their own reason', () => {
+    const gap = route('A', { noData: 60 })
+    expect(compareOn('no_data_miles', gap, route('B'), 'worse')).toBe(
+      'More miles without a forecast than Route B (60 mi vs 0 mi)',
+    )
+  })
+
   it('words average risk with two decimals and duration as time', () => {
     const a = route('A', { average: 0.054, hours: 13 })
     const b = route('B', { average: 0.062, hours: 12.5 })
@@ -139,6 +159,13 @@ describe('summarizeRecommendation', () => {
     expect(summary.body).toMatch(/fewest No Travel miles \(12 mi\)/)
   })
 
+  it('never presents a route with forecast gaps as all clear', () => {
+    const best = route('A', { miles: { low: 700 }, noData: 25 })
+    const summary = summarizeRecommendation(plan([best]))
+    expect(summary.tone).toBe('warning')
+    expect(summary.body).toMatch(/25 mi of Route A has no forecast/)
+  })
+
   it('uses a warning tone when even the best route has Severe miles', () => {
     expect(summarizeRecommendation(plan([route('A', { miles: { severe: 5 } })])).tone).toBe(
       'warning',
@@ -154,13 +181,16 @@ describe('summarizeRecommendation', () => {
 })
 
 describe('sameRiskyMiles', () => {
-  it('ignores Low miles and sub-mile rounding', () => {
+  it('ignores Low miles and compares at 0.1 mi, like the ranking', () => {
     expect(
       sameRiskyMiles(
         route('A', { miles: { low: 10, high: 5.2 } }),
-        route('B', { miles: { low: 99, high: 4.9 } }),
+        route('B', { miles: { low: 99, high: 5.24 } }),
       ),
     ).toBe(true)
+    expect(
+      sameRiskyMiles(route('A', { miles: { high: 5.2 } }), route('B', { miles: { high: 4.9 } })),
+    ).toBe(false)
     expect(
       sameRiskyMiles(route('A', { miles: { high: 5 } }), route('B', { miles: { severe: 5 } })),
     ).toBe(false)

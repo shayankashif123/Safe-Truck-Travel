@@ -9,6 +9,7 @@ import { RISK_LABEL, type RiskLevel } from '../../shared/risk/riskLevels'
 /** The brief's ranking order, as shown to the user. */
 export const RANKING_STEPS: readonly { criterion: RankingCriterion; label: string }[] = [
   { criterion: 'no_travel_miles', label: 'Fewest No Travel miles' },
+  { criterion: 'no_data_miles', label: 'Fewest miles without a forecast' },
   { criterion: 'severe_miles', label: 'Fewest Severe miles' },
   { criterion: 'high_miles', label: 'Fewest High miles' },
   { criterion: 'average_risk', label: 'Lowest average risk' },
@@ -20,33 +21,59 @@ const RISKY_LEVELS: readonly RiskLevel[] = ['moderate', 'high', 'severe', 'no_tr
 interface CriterionCopy {
   better: string
   worse: string
-  value: (route: PlannedRoute) => string
+  /** Both routes' values, worded so that a deciding difference is always visible. */
+  values: (subject: PlannedRoute, reference: PlannedRoute) => [string, string]
 }
 
-const milesAt = (level: RiskLevel) => (route: PlannedRoute) =>
-  formatMiles(route.risk.miles_by_level[level])
+/**
+ * Miles are ranked at 0.1 mi (backend K8). When whole miles would read the same
+ * ("12 mi vs 12 mi"), one decimal is shown so the reason stays visible.
+ */
+function distinctMiles(a: number, b: number): [string, string] {
+  const [x, y] = [formatMiles(a), formatMiles(b)]
+  return x !== y ? [x, y] : [formatMiles(a, 1), formatMiles(b, 1)]
+}
+
+const milesOf =
+  (get: (route: PlannedRoute) => number) => (subject: PlannedRoute, reference: PlannedRoute) =>
+    distinctMiles(get(subject), get(reference))
+
+const milesAt = (level: RiskLevel) => milesOf((route) => route.risk.miles_by_level[level])
+
+const each =
+  (format: (route: PlannedRoute) => string) =>
+  (subject: PlannedRoute, reference: PlannedRoute): [string, string] => [
+    format(subject),
+    format(reference),
+  ]
 
 const CRITERION_COPY: Record<RankingCriterion, CriterionCopy> = {
   no_travel_miles: {
     better: 'Fewer No Travel miles',
     worse: 'More No Travel miles',
-    value: milesAt('no_travel'),
+    values: milesAt('no_travel'),
+  },
+  no_data_miles: {
+    better: 'Fewer miles without a forecast',
+    worse: 'More miles without a forecast',
+    values: milesOf((route) => route.risk.no_data_miles),
   },
   severe_miles: {
     better: 'Fewer Severe miles',
     worse: 'More Severe miles',
-    value: milesAt('severe'),
+    values: milesAt('severe'),
   },
-  high_miles: { better: 'Fewer High miles', worse: 'More High miles', value: milesAt('high') },
+  high_miles: { better: 'Fewer High miles', worse: 'More High miles', values: milesAt('high') },
   average_risk: {
     better: 'Lower average risk',
     worse: 'Higher average risk',
-    value: (route) => route.risk.average_risk?.toFixed(2) ?? 'n/a',
+    values: each((route) => route.risk.average_risk?.toFixed(2) ?? 'n/a'),
   },
   duration: {
     better: 'Shorter trip',
     worse: 'Longer trip',
-    value: (route) => formatDuration(route.trip_duration_s),
+    // Ranked in whole minutes (backend K8), exactly the precision shown here.
+    values: each((route) => formatDuration(route.trip_duration_s)),
   },
 }
 
@@ -58,14 +85,15 @@ export function compareOn(
   direction: 'better' | 'worse',
 ): string {
   const copy = CRITERION_COPY[criterion]
-  return `${copy[direction]} than Route ${reference.id} (${copy.value(subject)} vs ${copy.value(reference)})`
+  const [mine, theirs] = copy.values(subject, reference)
+  return `${copy[direction]} than Route ${reference.id} (${mine} vs ${theirs})`
 }
 
-/** True when both routes spend the same miles at every level above Low. */
+/** True when both routes spend the same miles (to 0.1 mi, as ranked) at every level above Low. */
 export function sameRiskyMiles(a: PlannedRoute, b: PlannedRoute): boolean {
+  const tenths = (miles: number) => Math.round(miles * 10)
   return RISKY_LEVELS.every(
-    (level) =>
-      Math.round(a.risk.miles_by_level[level]) === Math.round(b.risk.miles_by_level[level]),
+    (level) => tenths(a.risk.miles_by_level[level]) === tenths(b.risk.miles_by_level[level]),
   )
 }
 
@@ -123,6 +151,20 @@ export interface RecommendationSummary {
 }
 
 export function summarizeRecommendation(plan: TripPlan): RecommendationSummary {
+  const summary = summarizeRanking(plan)
+  const [best] = plan.routes
+  if (best.risk.no_data_miles <= 0 || summary.tone === 'error') return summary
+  // Missing forecasts are never presented as safe (docs/DECISIONS.md T5, K10).
+  return {
+    tone: 'warning',
+    title: summary.title,
+    body:
+      `${summary.body} ${formatMiles(best.risk.no_data_miles)} of Route ${best.id} ` +
+      'has no forecast for the time the truck is there.',
+  }
+}
+
+function summarizeRanking(plan: TripPlan): RecommendationSummary {
   const [best, runnerUp] = plan.routes
   const tone = toneFor(best.risk.worst_level)
 

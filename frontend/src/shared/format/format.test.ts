@@ -34,6 +34,13 @@ describe('distances', () => {
     expect(formatMiles(1234.6)).toBe('1,235 mi')
   })
 
+  it('keeps one decimal below 10 miles, so short stretches never read as 0', () => {
+    expect(formatMiles(0.4)).toBe('0.4 mi')
+    expect(formatMiles(7)).toBe('7 mi')
+    expect(formatMiles(0)).toBe('0 mi')
+    expect(formatMiles(12.34, 1)).toBe('12.3 mi')
+  })
+
   it('signs deltas and hides zero', () => {
     expect(formatMilesDelta(127.2)).toBe('+127 mi')
     expect(formatMilesDelta(-4)).toBe('−4 mi')

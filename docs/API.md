@@ -118,7 +118,8 @@ Response (abridged):
 
 - `routes` are in **ranked order**; `id` (A, B, C) is the routing provider's order and stays stable.
 - `decided_by`: the first ranking criterion on which the recommended route beats this one
-  (`no_travel_miles`, `severe_miles`, `high_miles`, `average_risk`, `duration`), or `null`.
+  (`no_travel_miles`, `no_data_miles`, `severe_miles`, `high_miles`, `average_risk`, `duration`),
+  or `null`.
 - `trip_duration_s` is door to door, including `stops`; it is the "travel time" the ranking
   compares, and `arrival` is departure + `trip_duration_s`. `driving_duration_s` is wheel time only.
 - `stops` are the required driver stops in time order: `break` (30 min after 8 h of driving) and

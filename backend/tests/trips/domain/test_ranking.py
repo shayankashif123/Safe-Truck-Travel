@@ -7,13 +7,13 @@ from trips.domain.scoring import RouteRiskSummary
 HOUR = 3600
 
 
-def option(route_id, *, hours=10.0, no_travel=0.0, severe=0.0, high=0.0, average=0.0):
+def option(route_id, *, hours=10.0, no_travel=0.0, no_data=0.0, severe=0.0, high=0.0, average=0.0):
     miles = dict.fromkeys(RiskLevel, 0.0) | {
         RiskLevel.NO_TRAVEL: no_travel,
         RiskLevel.SEVERE: severe,
         RiskLevel.HIGH: high,
     }
-    return RouteOption(route_id, hours * HOUR, RouteRiskSummary(miles, 0.0, average))
+    return RouteOption(route_id, hours * HOUR, RouteRiskSummary(miles, no_data, average))
 
 
 def ids(ranking):
@@ -28,6 +28,24 @@ def test_no_travel_miles_outrank_everything():
 
     assert ids(ranking) == ["severe", "blocked"]
     assert ranking.deciding_criterion(blocked) == Criterion.NO_TRAVEL_MILES
+
+
+def test_a_forecast_gap_never_makes_a_route_look_safest():
+    # Route "gap" has no Severe miles only because 60 of its miles have no forecast.
+    gap = option("gap", no_data=60, average=0.0)
+    known = option("known", severe=40, average=1.5)
+
+    ranking = rank_routes([gap, known])
+
+    assert ids(ranking) == ["known", "gap"]
+    assert ranking.deciding_criterion(gap) == Criterion.NO_DATA_MILES
+
+
+def test_no_travel_still_outranks_missing_forecasts():
+    ranking = rank_routes([option("blocked", no_travel=1), option("gap", no_data=100)])
+
+    assert ranking.recommended.route_id == "gap"
+    assert ranking.deciding_criterion(ranking.ranked[1]) == Criterion.NO_TRAVEL_MILES
 
 
 def test_fewer_severe_miles_beat_a_much_faster_route():
@@ -67,6 +85,17 @@ def test_floating_point_noise_does_not_decide():
     clean = option("clean", severe=12.0, hours=10)
 
     assert rank_routes([clean, noisy]).recommended.route_id == "noisy"
+
+
+def test_travel_times_within_the_same_minute_are_a_tie():
+    # 15 seconds apart and both shown as "10 h": not a reason to recommend.
+    first = option("first", hours=10 + 25 / HOUR)
+    second = option("second", hours=10 + 10 / HOUR)
+
+    ranking = rank_routes([first, second])
+
+    assert ids(ranking) == ["first", "second"]
+    assert ranking.deciding_criterion(ranking.ranked[1]) is None
 
 
 def test_full_tie_keeps_provider_order():

@@ -17,8 +17,12 @@ export function formatDuration(seconds: number): string {
   return `${hours} h ${minutes} min`
 }
 
-export function formatMiles(miles: number): string {
-  return `${Math.round(miles).toLocaleString(LOCALE)} mi`
+/**
+ * "1,235 mi". Below 10 mi one decimal is kept, so a short risky stretch reads
+ * "0.4 mi" rather than "0 mi". Pass `fractionDigits` to force a precision.
+ */
+export function formatMiles(miles: number, fractionDigits = miles < 10 ? 1 : 0): string {
+  return `${miles.toLocaleString(LOCALE, { maximumFractionDigits: fractionDigits })} mi`
 }
 
 export function formatPounds(pounds: number): string {
