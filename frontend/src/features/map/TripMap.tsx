@@ -15,6 +15,7 @@ import {
 import type { TripPlan } from '../../shared/api/types'
 import { DestinationMarker, OriginMarker } from '../../shared/ui/PlaceMarkers'
 import { CheckpointPopup } from './CheckpointPopup'
+import { CorridorHeatmap } from './CorridorHeatmap'
 import { MapStatus } from './MapStatus'
 import { checkpointFeatures, labelAnchors, planBounds, routeFeatures } from './mapData'
 import {
@@ -31,7 +32,20 @@ import { RouteLabel } from './RouteLabel'
 
 const INITIAL_VIEW = { longitude: -98.6, latitude: 39.5, zoom: 3.3 } // continental US
 const FIT_PADDING = 72
+/** Height kept clear for the heatmap panel at the bottom of the map. */
+const PANEL_CLEARANCE = 250
 const FIT_MAX_ZOOM = 9
+
+/** Padding that keeps routes out from under the heatmap panel, without
+ *  squeezing short (mobile) maps: the clearance is capped at 40% of the height. */
+function fitPadding(mapHeight: number) {
+  return {
+    top: FIT_PADDING,
+    right: FIT_PADDING,
+    left: FIT_PADDING,
+    bottom: Math.max(FIT_PADDING, Math.min(PANEL_CLEARANCE, mapHeight * 0.4)),
+  }
+}
 
 export interface TripMapProps {
   plan: TripPlan | null
@@ -75,7 +89,7 @@ export default function TripMap({ plan, selectedRouteId, onSelectRoute, busy }: 
   const fitToPlan = useCallback(() => {
     if (!data || !mapRef.current) return
     mapRef.current.fitBounds(data.bounds, {
-      padding: FIT_PADDING,
+      padding: fitPadding(mapRef.current.getContainer().clientHeight),
       maxZoom: FIT_MAX_ZOOM,
       duration: prefersReducedMotion() ? 0 : 800,
     })
@@ -168,6 +182,11 @@ export default function TripMap({ plan, selectedRouteId, onSelectRoute, busy }: 
         <NavigationControl position="top-right" showCompass={false} />
         <ScaleControl position="bottom-right" unit="imperial" />
 
+        {/* Rendered before the route layers so the heatmap sits beneath them. */}
+        {plan && (
+          <CorridorHeatmap plan={plan} selectedRouteId={selectedRouteId} beforeId={labelLayerId} />
+        )}
+
         {data && (
           <>
             <Source id={ROUTES_SOURCE} type="geojson" data={data.routes} />
@@ -234,9 +253,12 @@ export default function TripMap({ plan, selectedRouteId, onSelectRoute, busy }: 
 
       <MapStatus hasPlan={Boolean(plan)} busy={busy} />
 
-      <Box sx={{ position: 'absolute', left: 16, bottom: 16, pointerEvents: 'none' }}>
-        <RiskLegend />
-      </Box>
+      {/* Once a trip is planned, the heatmap panel carries the legend. */}
+      {!plan && (
+        <Box sx={{ position: 'absolute', left: 16, bottom: 16, pointerEvents: 'none' }}>
+          <RiskLegend />
+        </Box>
+      )}
     </Box>
   )
 }

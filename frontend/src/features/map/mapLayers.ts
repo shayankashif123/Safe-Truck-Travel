@@ -35,6 +35,53 @@ const byZoom = (atZoom4: number, atZoom10: number): ExpressionSpecification => [
   atZoom10,
 ]
 
+export const HEATMAP_SOURCE = 'corridor-heatmap'
+export const HEATMAP_LAYER = 'corridor-heatmap-fill'
+/** Feature-state key holding each cell's risk level for the current frame. */
+export const HEATMAP_LEVEL_STATE = 'level'
+
+/**
+ * Corridor risk cells, coloured from feature state.
+ *
+ * Changing a frame calls `setFeatureState` per cell, which only rewrites the
+ * cells' colour attributes on the GPU. (A data-driven expression that read the
+ * frame from global state was measured at ~250 ms per frame, because MapLibre
+ * re-tiles the whole source when such an expression's inputs change.)
+ */
+export function heatmapLayer(palette: Palette, visible: boolean, beforeId?: string): LayerProps {
+  const { risk } = palette
+  // 0 low .. 4 no_travel; -1 (or not yet set) = no data.
+  const level: ExpressionSpecification = ['coalesce', ['feature-state', HEATMAP_LEVEL_STATE], -1]
+  return {
+    id: HEATMAP_LAYER,
+    type: 'fill',
+    source: HEATMAP_SOURCE,
+    beforeId,
+    layout: { visibility: visible ? 'visible' : 'none' },
+    paint: {
+      'fill-color': [
+        'match',
+        level,
+        0,
+        risk.low.main,
+        1,
+        risk.moderate.main,
+        2,
+        risk.high.main,
+        3,
+        risk.severe.main,
+        4,
+        risk.no_travel.main,
+        risk.no_data.main,
+      ],
+      // Low is a faint wash so hotspots carry the eye; risk grows more opaque.
+      'fill-opacity': ['match', level, 0, 0.1, 1, 0.34, 2, 0.42, 3, 0.5, 4, 0.56, 0.08],
+      // Without antialiasing, adjacent translucent cells meet without seams.
+      'fill-antialias': false,
+    },
+  }
+}
+
 /**
  * Draw order, bottom to top. Route lines go *under* the basemap's place labels
  * (`labelLayerId`) so city names stay readable; checkpoints stay on top.
