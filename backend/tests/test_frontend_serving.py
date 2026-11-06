@@ -32,6 +32,7 @@ def test_the_app_page_is_always_revalidated(dist):
 
     assert response.status_code == 200
     assert response["Cache-Control"] == "no-cache"
+    assert response["X-Frame-Options"] == "DENY"
 
 
 def test_hashed_bundles_are_cached_forever(dist):

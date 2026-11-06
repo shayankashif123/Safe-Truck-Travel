@@ -9,3 +9,5 @@ def add_headers(headers, path: str, url: str) -> None:
     # after a deploy, a cached copy would point at bundles that no longer exist.
     if url == "/" or url.endswith(".html"):
         headers["Cache-Control"] = "no-cache"
+        # WhiteNoise answers before Django's clickjacking middleware runs.
+        headers["X-Frame-Options"] = "DENY"

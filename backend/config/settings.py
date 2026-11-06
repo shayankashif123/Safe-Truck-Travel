@@ -121,10 +121,14 @@ REST_FRAMEWORK = {
         "trip_plan": "20/min",
         "places": "120/min",
     },
-    # Proxies in front of Django that append to X-Forwarded-For. Set in production
-    # so throttling keys on the address the proxy saw, which a client cannot forge.
-    "NUM_PROXIES": env_int("DJANGO_NUM_PROXIES", None),
 }
+
+# Header holding the real client address, written by a proxy the client cannot
+# bypass. On Render (which sets RENDER=true) that is Cloudflare's
+# CF-Connecting-IP. Unset locally: DRF's default identification applies.
+CLIENT_IP_HEADER = os.environ.get("CLIENT_IP_HEADER") or (
+    "CF-Connecting-IP" if os.environ.get("RENDER") == "true" else ""
+)
 
 # --- External providers -------------------------------------------------------
 
