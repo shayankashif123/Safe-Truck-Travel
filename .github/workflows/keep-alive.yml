@@ -1,0 +1,20 @@
+name: Keep demo awake
+
+# Render's free plan stops a service after 15 minutes without traffic and takes
+# about two minutes to wake (DECISIONS D3). A ping every 10 minutes keeps the
+# demo responsive for reviewers. GitHub may delay scheduled runs at busy times.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the health endpoint
+        run: >
+          curl --fail --silent --show-error --max-time 150
+          --retry 3 --retry-delay 20 --retry-all-errors
+          https://safe-truck-travel.onrender.com/api/health/
