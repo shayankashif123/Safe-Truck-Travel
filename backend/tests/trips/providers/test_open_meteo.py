@@ -141,3 +141,10 @@ def test_rejects_invalid_windows_without_calling_the_api(weather, server, start,
         weather.hourly_forecasts([DENVER], start, end)
 
     assert server.requests == []
+
+
+def test_provider_clients_share_one_tls_context():
+    # Loading the CA bundle is the costliest part of the first request (~0.6 s each).
+    from trips.providers.http import tls_context
+
+    assert tls_context() is tls_context()

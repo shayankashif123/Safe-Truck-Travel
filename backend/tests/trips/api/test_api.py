@@ -133,6 +133,13 @@ def test_team_driver_has_no_stops(api, fake_providers):
     assert all(r["trip_duration_s"] == r["driving_duration_s"] for r in body["routes"])
 
 
+def test_plan_is_gzipped_for_clients_that_accept_it(api, fake_providers):
+    response = api.post(PLAN_URL, payload(), format="json", HTTP_ACCEPT_ENCODING="gzip")
+
+    assert response.status_code == 200
+    assert response["Content-Encoding"] == "gzip"
+
+
 # --- Trip plan: validation -----------------------------------------------------
 
 

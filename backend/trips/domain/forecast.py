@@ -41,14 +41,21 @@ class HourlyForecast:
     def hours(self) -> int:
         return len(self.wind_mph)
 
-    def sample_at(self, at: datetime) -> WeatherSample | None:
-        """Conditions at `at`, or None when the forecast does not cover it."""
+    def indices_at(self, at: datetime) -> tuple[int, int]:
+        """
+        Series indices read for `at`: the nearest hour (wind) and the hour whose
+        bucket contains `at` (rain and snow). May fall outside the series.
+        """
         if at.tzinfo is None:
             raise ValueError("`at` must be timezone-aware")
-
         offset_h = (at.timestamp() - self.start_epoch) / HOUR_S
         nearest = math.floor(offset_h + 0.5)  # half-up, not banker's rounding
         bucket_end = math.floor(offset_h) + 1
+        return nearest, bucket_end
+
+    def sample_at(self, at: datetime) -> WeatherSample | None:
+        """Conditions at `at`, or None when the forecast does not cover it."""
+        nearest, bucket_end = self.indices_at(at)
 
         wind = _at(self.wind_mph, nearest)
         rain = _at(self.rain_in_per_hr, bucket_end)

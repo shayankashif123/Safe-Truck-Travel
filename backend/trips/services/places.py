@@ -1,4 +1,4 @@
-from trips.providers.tomtom import Place, PlaceSuggestion, TomTomClient
+from trips.providers.tomtom import Place, PlaceSuggestion, TomTomClient, validate_place_ref
 from trips.services.caching import cache_key, get_or_load
 from trips.services.clients import tomtom_client
 
@@ -16,6 +16,9 @@ def suggest_places(query: str, *, client: TomTomClient | None = None) -> list[Pl
 
 
 def resolve_place(kind: str, place_id: str, *, client: TomTomClient | None = None) -> Place:
+    # Validated before the cache and the provider client: bad input is a 400
+    # whatever the provider's state (e.g. a missing API key).
+    validate_place_ref(kind, place_id)
     return get_or_load(
         cache_key("place", kind, place_id),
         PLACE_TTL_S,

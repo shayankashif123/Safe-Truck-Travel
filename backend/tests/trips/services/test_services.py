@@ -194,3 +194,44 @@ def test_missing_tomtom_key_fails_with_a_clear_message(settings):
 )
 def test_time_zone_at_finds_the_local_zone(place, zone):
     assert time_zone_at(place) == zone
+
+
+# --- Route display line -------------------------------------------------------------
+
+
+def test_each_route_is_simplified_once_and_then_served_from_cache(monkeypatch):
+    from tests.factories import straight_route
+    from trips.services import routing
+
+    calls = []
+    real = routing.simplify
+    monkeypatch.setattr(routing, "simplify", lambda pts, tol: calls.append(1) or real(pts, tol))
+    route = straight_route()
+
+    first = routing.display_points(route)
+    again = routing.display_points(straight_route())  # equal content, new object
+
+    assert first == again == [route.points[0], route.points[-1]]
+    assert len(calls) == 1
+
+
+def test_different_routes_get_their_own_display_line():
+    from tests.factories import straight_route
+    from trips.services.routing import display_points
+
+    assert display_points(straight_route(length_deg=1)) != display_points(
+        straight_route(length_deg=2)
+    )
+
+
+def test_invalid_place_reference_is_rejected_before_the_provider_is_touched(monkeypatch):
+    from trips.domain.errors import InvalidInput
+    from trips.services import places
+
+    def no_client():
+        raise AssertionError("the provider client must not be created for invalid input")
+
+    monkeypatch.setattr(places, "tomtom_client", no_client)
+
+    with pytest.raises(InvalidInput):
+        places.resolve_place("users", "abc")

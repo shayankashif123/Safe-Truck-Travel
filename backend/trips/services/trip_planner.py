@@ -20,6 +20,7 @@ from trips.domain.geometry import METERS_PER_MILE, haversine_m
 from trips.domain.hours_of_service import DriverMode, DrivingSchedule, Stop, schedule_drive
 from trips.domain.levels import RiskLevel
 from trips.domain.ranking import Ranking, RouteOption, rank_routes
+from trips.domain.risk_timeline import hourly_risk_levels
 from trips.domain.routes import Route
 from trips.domain.scoring import RoutePoint, RouteRiskSummary, summarize_route
 from trips.domain.weather_grid import GridCell
@@ -28,7 +29,7 @@ from trips.providers.errors import NoRouteFound
 from trips.providers.open_meteo import OpenMeteoClient
 from trips.providers.tomtom import PROVIDER as ROUTING_PROVIDER
 from trips.providers.tomtom import TomTomClient
-from trips.services.routing import truck_routes
+from trips.services.routing import display_points, truck_routes
 from trips.services.time_zones import time_zone_at
 from trips.services.weather import forecasts_for_cells
 
@@ -86,6 +87,7 @@ class PlannedRoute:
     stops: tuple[PlannedStop, ...]
     checkpoints: tuple[PlannedCheckpoint, ...]
     risk: RouteRiskSummary
+    display_points: list[LatLng]  # simplified line for the map (DECISIONS W7)
 
     @property
     def trip_duration_s(self) -> float:
@@ -203,7 +205,15 @@ def _plan_route(
 
     risk = summarize_route([RoutePoint(p.checkpoint.mile, p.level) for p in planned])
     stops = tuple(_place_stop(stop, profile, departure) for stop in schedule.stops)
-    return PlannedRoute(route_id, profile.route, schedule, stops, tuple(planned), risk)
+    return PlannedRoute(
+        route_id,
+        profile.route,
+        schedule,
+        stops,
+        tuple(planned),
+        risk,
+        display_points(profile.route),
+    )
 
 
 def _place_stop(stop: Stop, profile: RouteProfile, departure: datetime) -> PlannedStop:
@@ -225,15 +235,10 @@ def _build_heatmap(
     resolution_deg: float,
     load_lb: int,
 ) -> Heatmap:
-    frame_times = [departure + timedelta(hours=h) for h in range(HEATMAP_FRAMES)]
-    cells = []
-    for cell in sorted(forecasts):
-        forecast = forecasts[cell]
-        levels = []
-        for moment in frame_times:
-            sample = forecast.sample_at(moment)
-            levels.append(assess_risk(sample, load_lb).level if sample else None)
-        cells.append(HeatmapCell(cell, tuple(levels)))
+    cells = [
+        HeatmapCell(cell, hourly_risk_levels(forecasts[cell], departure, HEATMAP_FRAMES, load_lb))
+        for cell in sorted(forecasts)
+    ]
     return Heatmap(resolution_deg, departure, tuple(cells))
 
 

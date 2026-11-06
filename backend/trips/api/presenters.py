@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from trips.domain.geo import LatLng
-from trips.domain.geometry import METERS_PER_MILE, simplify
+from trips.domain.geometry import METERS_PER_MILE
 from trips.domain.levels import RiskLevel
 from trips.domain.ranking import Ranking
 from trips.providers.tomtom import Place, PlaceSuggestion
@@ -22,7 +22,6 @@ from trips.services.trip_planner import (
 )
 
 COORD_DECIMALS = 5  # ~1 m
-GEOMETRY_TOLERANCE_M = 25  # invisible at map zoom levels; ~10x fewer points
 
 
 def present_trip_plan(plan: TripPlan) -> dict[str, Any]:
@@ -72,7 +71,7 @@ def present_route(
             "average_risk": None if risk.average_risk is None else round(risk.average_risk, 2),
             "worst_level": _level_key(risk.worst_level),
         },
-        "geometry": [_coords(p) for p in simplify(route.route.points, GEOMETRY_TOLERANCE_M)],
+        "geometry": [_coords(p) for p in route.display_points],
         "checkpoints": [present_checkpoint(c) for c in route.checkpoints],
     }
 

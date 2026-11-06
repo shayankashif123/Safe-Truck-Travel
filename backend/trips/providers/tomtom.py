@@ -76,9 +76,7 @@ class TomTomClient:
         return parse_response(PROVIDER, _parse_suggestions, body)
 
     def place_details(self, kind: str, place_id: str) -> Place:
-        # Both values end up in the URL path, so they are validated first.
-        if kind not in PLACE_KINDS or not PLACE_ID.fullmatch(place_id):
-            raise InvalidInput("Invalid place reference.")
+        validate_place_ref(kind, place_id)  # both values end up in the URL path
         body = request_json(
             self._http,
             PROVIDER,
@@ -121,6 +119,12 @@ class TomTomClient:
             "TomTom-Api-Version": PLACES_API_VERSION,
             "Attributes": attributes,
         }
+
+
+def validate_place_ref(kind: str, place_id: str) -> None:
+    """Reject a place reference that is not a TomTom kind and id."""
+    if kind not in PLACE_KINDS or not PLACE_ID.fullmatch(place_id):
+        raise InvalidInput("Invalid place reference.")
 
 
 def to_rfc3339_utc(moment: datetime) -> str:

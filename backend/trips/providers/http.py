@@ -1,8 +1,11 @@
 """Shared HTTP plumbing so every provider handles failures the same way."""
 
+import ssl
 from collections.abc import Callable
+from functools import cache
 from typing import Any
 
+import certifi
 import httpx
 
 from trips.providers.errors import (
@@ -18,11 +21,20 @@ DEFAULT_TIMEOUT = httpx.Timeout(20.0, connect=CONNECT_TIMEOUT_S)
 CONNECT_RETRIES = 2  # retries connection failures only, never a request the server received
 
 
+@cache
+def tls_context() -> ssl.SSLContext:
+    """
+    One TLS context for every provider client. Loading the CA bundle was
+    measured at ~0.6 s of CPU per client, paid on the first request.
+    """
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 def build_client(*, base_url: str, timeout: httpx.Timeout = DEFAULT_TIMEOUT) -> httpx.Client:
     return httpx.Client(
         base_url=base_url,
         timeout=timeout,
-        transport=httpx.HTTPTransport(retries=CONNECT_RETRIES),
+        transport=httpx.HTTPTransport(retries=CONNECT_RETRIES, verify=tls_context()),
         headers={"Accept": "application/json"},
     )
 

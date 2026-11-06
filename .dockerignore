@@ -1,0 +1,18 @@
+# Secrets: never let a local .env reach an image.
+**/.env
+**/.env.*
+
+# Dependencies and build output are produced inside the image.
+**/node_modules
+**/.venv
+frontend/dist
+
+# Not needed at runtime.
+.git
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+backend/tests
+docs
+*.md

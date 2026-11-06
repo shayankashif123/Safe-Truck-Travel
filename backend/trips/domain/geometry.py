@@ -51,20 +51,27 @@ def simplify(points: Sequence[LatLng], tolerance_m: float) -> list[LatLng]:
     candidates.append(len(points) - 1)
 
     # Pass 2: Douglas-Peucker over the candidates (squared distances, no sqrt).
+    # The inner loop runs ~10^5 times per route, so it avoids indirection and
+    # builtin calls (min/max) per point.
+    cx = [xs[i] for i in candidates]
+    cy = [ys[i] for i in candidates]
     keep = [False] * len(candidates)
     keep[0] = keep[-1] = True
     stack = [(0, len(candidates) - 1)]
     while stack:
         first, last = stack.pop()
-        ax, ay = xs[candidates[first]], ys[candidates[first]]
-        bx, by = xs[candidates[last]], ys[candidates[last]]
-        dx, dy = bx - ax, by - ay
+        ax, ay = cx[first], cy[first]
+        dx, dy = cx[last] - ax, cy[last] - ay
         length_sq = dx * dx + dy * dy
         farthest, farthest_sq = -1, tolerance_sq
         for k in range(first + 1, last):
-            px, py = xs[candidates[k]], ys[candidates[k]]
+            px, py = cx[k], cy[k]
             if length_sq:
-                t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / length_sq))
+                t = ((px - ax) * dx + (py - ay) * dy) / length_sq
+                if t < 0.0:
+                    t = 0.0
+                elif t > 1.0:
+                    t = 1.0
                 ex, ey = px - (ax + t * dx), py - (ay + t * dy)
             else:
                 ex, ey = px - ax, py - ay

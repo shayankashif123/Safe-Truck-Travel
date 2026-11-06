@@ -1,0 +1,16 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: safe-truck-travels
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health/
+    autoDeployTrigger: commit
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      # Entered once in the Render dashboard; never committed.
+      - key: TOMTOM_API_KEY
+        sync: false
